@@ -22,7 +22,7 @@ const PROMPT = (focus: string) => `You are writing a practice quiz for an 8th-gr
   focus ? `\nA parent added this note: "${focus}"` : ""
 }
 
-Write exactly ${QUESTION_COUNT} multiple-choice questions that test the material on the study guide, and save them with the save_quiz tool.
+Write exactly ${QUESTION_COUNT} multiple-choice questions that test the material on the study guide. You must deliver them by calling the save_quiz tool once, with all ${QUESTION_COUNT} questions. Do not write the quiz out as text.
 
 Rules:
 - Use only facts, terms and ideas that appear on the study guide. You may phrase questions as application or "which best explains" questions.
@@ -75,15 +75,22 @@ export async function generateQuiz(files: StudyFile[], focus: string): Promise<D
 
   const msg = await client.messages.create({
     model: process.env.ANTHROPIC_MODEL || "claude-sonnet-5-5",
-    max_tokens: 12000,
+    max_tokens: 16000,
     tools: [tool],
-    tool_choice: { type: "tool", name: "save_quiz" },
+    tool_choice: { type: "auto" }, // some models refuse forced tool use; the prompt asks for save_quiz
     messages: [{ role: "user", content }],
   });
 
   const use = msg.content.find((b) => b.type === "tool_use") as Anthropic.ToolUseBlock | undefined;
-  if (!use) throw new StudyGuideError("Claude didn't return a quiz. Try again.");
-  const input = use.input as {
+  let raw: unknown = use?.input;
+  if (!raw) {
+    // Fallback: the model answered in text. Take the JSON object out of it.
+    const text = msg.content.filter((b) => b.type === "text").map((b) => (b as Anthropic.TextBlock).text).join("\n");
+    const start = text.indexOf("{"), end = text.lastIndexOf("}");
+    if (start >= 0 && end > start) { try { raw = JSON.parse(text.slice(start, end + 1)); } catch { /* handled below */ } }
+  }
+  if (!raw) throw new StudyGuideError(msg.stop_reason === "max_tokens" ? "The quiz was cut off before it finished. Try fewer pages." : "Claude didn't return a quiz. Try again.");
+  const input = raw as {
     title?: string; subject?: string; not_study_material?: string;
     questions?: { question?: string; choices?: string[]; correct_index?: number; explanation?: string }[];
   };
