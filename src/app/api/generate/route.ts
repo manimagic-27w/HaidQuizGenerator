@@ -38,10 +38,15 @@ export async function POST(req: Request) {
   } catch (e) {
     if (e instanceof StudyGuideError) return NextResponse.json({ error: e.message }, { status: 422 });
     console.error("generate failed", e);
-    const status = (e as { status?: number }).status;
-    const msg = status === 429 ? "The Claude API is busy or your usage limit was reached. Try again in a few minutes."
+    const err = e as { status?: number; message?: string; error?: { error?: { message?: string } } };
+    const status = err.status;
+    const detail = err.error?.error?.message || err.message || "";
+    const msg = /credit balance/i.test(detail) ? "Your Anthropic account is out of API credits. Add credits at console.anthropic.com > Billing, then try again."
+      : status === 429 ? "The Claude API is busy or your usage limit was reached. Try again in a few minutes."
       : status === 401 ? "The Anthropic API key was rejected. Check ANTHROPIC_API_KEY in Vercel."
-      : "Something went wrong while writing questions. Try again.";
+      : status === 404 ? `The model "${process.env.ANTHROPIC_MODEL || "claude-sonnet-5-5"}" wasn't found. Check ANTHROPIC_MODEL in Vercel. (${detail})`
+      : status === 413 || /too large|too many pages|exceed/i.test(detail) ? `That file is too big for one request. Try fewer pages. (${detail})`
+      : `Something went wrong while writing questions${status ? ` (error ${status})` : ""}: ${detail || "no details"}`;
     return NextResponse.json({ error: msg }, { status: 502 });
   }
 }
