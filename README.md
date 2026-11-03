@@ -1,0 +1,68 @@
+# HaidQuizGenerator (Quiz Desk)
+
+Practice quizzes made from class study guides. A parent uploads photos or a PDF of a study guide, Claude writes 20 multiple-choice questions, the parent reviews and publishes, and the student takes the quiz on any device. Every attempt records how the time was spent so you can tell real study time from clicking through.
+
+**Stack:** Next.js 15 (App Router) on Vercel · Neon Postgres via Drizzle · Clerk sign-in · Claude API for quiz writing.
+
+## What it tracks
+
+For each attempt:
+
+- Total time, focused time (excludes time away and idle stretches), average and median seconds per question
+- Rushed answers (under 6 s) and how many of those were wrong
+- How many times the student left the page and for how long (tab switch, app switch, phone lock)
+- Idle time (no taps or keys for over 60 s)
+- Answer changes, number of sittings, score
+- An effort label: Focused, Mixed, Rushed or Distracted
+- A per-question time chart, colored by right/wrong
+
+Thresholds live in `src/lib/metrics.ts` (`IDLE_MS`, `RUSH_MS`).
+
+The answer key never reaches the student's browser. Grading happens on the server when she submits.
+
+## Deploy
+
+1. **Import the repo in Vercel.** New Project → import `HaidQuizGenerator`. Framework preset: Next.js.
+2. **Add Neon.** In the Vercel project: Storage → Create → Neon. This sets `DATABASE_URL`.
+3. **Add Clerk.** Create a Clerk application (email sign-in is enough). Copy `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` into Vercel environment variables, and set `NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in`.
+   - Recommended: in Clerk → Restrictions, turn on the allowlist and add only your family's email addresses, so nobody else can sign up.
+4. **Set the parent.** Add `PARENT_EMAILS` with your email (comma-separate to add another parent). Anyone else who signs in is a student.
+5. **Add the Claude API key.** Create a key at console.anthropic.com and set `ANTHROPIC_API_KEY`. Optional: `ANTHROPIC_MODEL` to change the model (defaults to `claude-sonnet-5-5`).
+6. **Create the tables.** On your machine:
+   ```bash
+   npm install
+   DATABASE_URL="<your Neon connection string>" npm run db:push
+   ```
+   You can copy the connection string from the Neon tab in Vercel.
+7. **Deploy, then add your domain.** Vercel → Settings → Domains → add your domain (buy one there, or point a subdomain like `quiz.yourdomain.com` at Vercel with the CNAME it shows). Add the same domain in Clerk → Domains for production.
+
+## Local development
+
+```bash
+cp .env.example .env.local   # fill in values
+npm install
+DATABASE_URL="<your Neon connection string>" npm run db:push
+npm run dev
+```
+
+## Upload limits
+
+Photos are resized in the browser before upload. Vercel limits a request to 4.5 MB, so a large scanned PDF may need to be split or compressed. Quiz writing usually takes one to two minutes; the route allows up to 5 minutes (`maxDuration` in `src/app/api/generate/route.ts`).
+
+## Project layout
+
+```
+src/
+  app/
+    page.tsx                  student quiz list
+    quiz/[id]/                quiz player (time tracking) + server start/resume
+    results/[id]/             score and answer review
+    parent/                   dashboard, quiz manager
+    parent/new/               upload study guide → review draft → publish
+    parent/attempts/[id]/     per-attempt breakdown and chart
+    api/generate/             sends photos/PDFs to Claude, returns a draft
+    api/quizzes/              publish, hide, delete
+    api/attempts/[id]/        save progress, submit for grading
+  db/schema.ts                quizzes, questions, attempts, attempt_answers
+  lib/                        auth roles, metrics, Claude prompt
+```

@@ -1,0 +1,85 @@
+import Link from "next/link";
+import { desc, eq, inArray, sql } from "drizzle-orm";
+import { db, attempts, attemptAnswers, quizzes, questions } from "@/db";
+import { requireParent } from "@/lib/auth";
+import { IDLE_MS, fmtDur, fmtSec, fmtWhen, metrics } from "@/lib/metrics";
+import QuizManager from "./QuizManager";
+
+export const dynamic = "force-dynamic";
+
+export default async function ParentPage() {
+  await requireParent();
+  const list = await db.select().from(attempts).orderBy(desc(attempts.startedAt)).limit(300);
+  const ans = list.length ? await db.select().from(attemptAnswers).where(inArray(attemptAnswers.attemptId, list.map((a) => a.id))) : [];
+  const rows = list.map((a) => ({ a, m: metrics({ ...a, answers: ans.filter((x) => x.attemptId === a.id) }) }));
+  const quizList = await db
+    .select({ id: quizzes.id, title: quizzes.title, archived: quizzes.archived, count: sql<number>`count(distinct ${questions.id})::int` })
+    .from(quizzes).leftJoin(questions, eq(questions.quizId, quizzes.id)).groupBy(quizzes.id).orderBy(desc(quizzes.createdAt));
+  const finishedByQuiz = Object.fromEntries(quizList.map((q) => [q.id, list.filter((a) => a.quizId === q.id && a.status === "done").length]));
+
+  const cutoff = Date.now() - 30 * 864e5;
+  const recent = rows.filter((r) => r.a.status === "done" && r.a.finishedAt && r.a.finishedAt.getTime() >= cutoff).map((r) => r.m);
+  const sum = (k: "active" | "answered" | "rushed" | "away" | "idle" | "pct") => recent.reduce((s, x) => s + (x[k] || 0), 0);
+  const answered = sum("answered");
+  const tiles: [string, string][] = recent.length ? [
+    ["Focused study time", fmtDur(sum("active"))],
+    ["Quizzes finished", String(recent.length)],
+    ["Avg per question", fmtSec(answered ? sum("active") / answered : 0)],
+    ["Avg score", `${Math.round(sum("pct") / recent.length)}%`],
+    ["Rushed answers", `${Math.round((100 * sum("rushed")) / Math.max(1, answered))}%`],
+    ["Away or idle", fmtDur(sum("away") + sum("idle"))],
+  ] : [];
+  const students = new Set(list.map((a) => a.studentId));
+
+  return (
+    <>
+      <section className="spread">
+        <div className="stack" style={{ gap: 6 }}>
+          <h1>Parent view</h1>
+          <p className="muted">How the study time is being spent.</p>
+        </div>
+        <Link className="btn primary" href="/parent/new">New quiz from study guide</Link>
+      </section>
+
+      <section className="stack">
+        <div className="spread"><h2>Last 30 days</h2><span className="small muted">Focused time leaves out time on other apps and idle stretches over {IDLE_MS / 1000}s</span></div>
+        {tiles.length ? (
+          <div className="tiles">{tiles.map(([k, v]) => <div className="tile" key={k}><span className="label">{k}</span><b>{v}</b></div>)}</div>
+        ) : <div className="notice">No finished quizzes yet. Results show up here as soon as one is submitted.</div>}
+      </section>
+
+      {rows.length > 0 && (
+        <section className="stack">
+          <h2>Every attempt</h2>
+          <div className="tablebox">
+            <table>
+              <thead><tr>
+                <th>When</th>{students.size > 1 && <th>Student</th>}<th>Quiz</th><th className="n">Score</th><th className="n">Total</th>
+                <th className="n">Focused</th><th className="n">Per Q</th><th className="n">Rushed</th><th className="n">Left page</th><th>Effort</th>
+              </tr></thead>
+              <tbody>
+                {rows.map(({ a, m }) => (
+                  <tr key={a.id}>
+                    <td><Link href={`/parent/attempts/${a.id}`}>{fmtWhen(a.startedAt)}</Link></td>
+                    {students.size > 1 && <td>{a.studentName || "Student"}</td>}
+                    <td>{a.quizTitle}</td>
+                    <td className="n">{m.pct != null ? `${a.score}/${a.total}` : `${m.answered}/${a.total}`}</td>
+                    <td className="n">{fmtDur(m.total)}</td>
+                    <td className="n">{fmtDur(m.active)}</td>
+                    <td className="n">{fmtSec(m.per)}</td>
+                    <td className="n">{m.rushed}</td>
+                    <td className="n">{m.awayCount}×</td>
+                    <td><span className={`pill ${m.effort.tone}`}>{m.effort.label}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="small muted">Open a date for the question-by-question breakdown.</p>
+        </section>
+      )}
+
+      <QuizManager quizzes={quizList.map((q) => ({ ...q, finished: finishedByQuiz[q.id] || 0 }))} />
+    </>
+  );
+}
