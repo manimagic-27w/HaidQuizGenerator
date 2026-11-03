@@ -1,13 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { ClerkProvider, SignedIn, UserButton } from "@clerk/nextjs";
-import { Bricolage_Grotesque, Figtree, JetBrains_Mono } from "next/font/google";
 import { getViewer } from "@/lib/auth";
 import "./globals.css";
-
-const display = Bricolage_Grotesque({ subsets: ["latin"], weight: ["500", "700", "800"], variable: "--f-display" });
-const body = Figtree({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--f-body" });
-const mono = JetBrains_Mono({ subsets: ["latin"], weight: ["500", "600"], variable: "--f-mono" });
 
 export const metadata: Metadata = {
   title: "Quiz Desk",
@@ -19,7 +14,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const viewer = await getViewer();
   return (
     <ClerkProvider>
-      <html lang="en" className={`${display.variable} ${body.variable} ${mono.variable}`}>
+      <html lang="en">
+        <head>
+          <link rel="preconnect" href="https://fonts.googleapis.com" />
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+          {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+          <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" />
+        </head>
         <body>
           <div className="wrap">
             <header className="top">

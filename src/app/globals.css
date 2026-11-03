@@ -1,5 +1,8 @@
 /* Graph-paper study desk: one centered column, one question per screen, scan-first parent dashboard. */
 :root {
+  --f-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI";
+  --f-body: "Figtree", "Segoe UI";
+  --f-mono: "JetBrains Mono", "SF Mono", Menlo, Consolas;
   --paper: #f4f7fb; --grid: #e6ecf5; --card: #ffffff; --ink: #172033; --muted: #5a6478; --rule: #d9e0ec;
   --accent: #2c56cf; --accent-ink: #ffffff; --accent-soft: #e3eafc;
   --hi: #ffe45c; --hi-ink: #2a2300;
