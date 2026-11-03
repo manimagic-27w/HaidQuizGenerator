@@ -5,7 +5,7 @@ export type Viewer = { id: string; name: string; isParent: boolean };
 
 function parentEmails(): string[] {
   return (process.env.PARENT_EMAILS || "")
-    .split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
+    .split(/[,;\s]+/).map((e) => e.trim().toLowerCase()).filter(Boolean);
 }
 
 /** The signed-in person, or null. Parents are the emails listed in PARENT_EMAILS. */
