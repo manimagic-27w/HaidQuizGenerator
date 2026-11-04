@@ -51,7 +51,7 @@ Each quiz is assigned to every student or to specific students. Pick when you pu
 
 ## Database changes
 
-After pulling a change to `src/db/schema.ts`, run `DATABASE_URL="<Neon string>" npm run db:push` again to update the tables.
+Put `DATABASE_URL=...` in `.env.local` once (it's git-ignored). After pulling a change to `src/db/schema.ts`, run `npm run db:push` to update the tables.
 
 ## Upload limits
 
