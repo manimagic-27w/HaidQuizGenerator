@@ -35,6 +35,7 @@ export default function QuizManager({ quizzes, students }: { quizzes: Q[]; stude
               <div className="who">For: <b>{assigneeLabel(q.assignedTo, students)}</b></div>
             </div>
             <div className="row">
+              <Link className="btn sm primary" href={`/parent/quizzes/${q.id}/round`} prefetch={false}>Next round</Link>
               <Link className="btn sm" href={`/quiz/${q.id}`} prefetch={false}>Preview</Link>
               <button className="btn sm" disabled={busy === q.id}
                 onClick={() => setEditing(editing?.id === q.id ? null : { id: q.id, ids: q.assignedTo })}>
@@ -64,7 +65,7 @@ export default function QuizManager({ quizzes, students }: { quizzes: Q[]; stude
         ))}
       </div>
       {error && <p className="err small">{error}</p>}
-      <p className="small muted">Deleting a quiz keeps past scores and times in the table above. A student keeps their results even if you unassign them.</p>
+      <p className="small muted"><b>Next round</b> writes 20 new questions from the saved study guide notes, aimed at what was missed. Deleting a quiz keeps past scores and times in the table above. A student keeps their results even if you unassign them.</p>
     </section>
   );
 }

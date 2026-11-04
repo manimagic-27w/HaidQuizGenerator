@@ -156,3 +156,13 @@ td a { color: var(--ink); font-weight: 600; }
 .check input { width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
 .who { font-size: 13px; color: var(--muted); }
 .who b { color: var(--ink); font-weight: 600; }
+
+/* study notes + rounds */
+.notes { border: 1px solid var(--rule); border-radius: 10px; padding: 10px 14px; background: var(--paper); }
+.notes summary { cursor: pointer; font-weight: 600; }
+.notes[open] { display: flex; flex-direction: column; gap: 8px; }
+.notes textarea, .notes pre { width: 100%; border: 1px solid var(--rule); border-radius: 8px; padding: 10px 12px; background: var(--card); font: 14px/1.5 var(--f-body), system-ui, sans-serif; white-space: pre-wrap; margin: 0; max-height: 420px; overflow: auto; }
+.miss { border-left: 3px solid var(--bad); padding: 6px 12px; display: flex; flex-direction: column; gap: 2px; font-size: 14px; }
+.topics { display: flex; flex-wrap: wrap; gap: 6px; }
+.range { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.range input { flex: 1 1 200px; accent-color: var(--accent); }

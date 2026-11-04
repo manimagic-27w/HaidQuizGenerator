@@ -21,8 +21,12 @@ const steps = [
     "created_by" text NOT NULL,
     "archived" boolean DEFAULT false NOT NULL,
     "assigned_to" jsonb DEFAULT '[]'::jsonb NOT NULL,
+    "study_notes" text DEFAULT '' NOT NULL,
+    "family_id" uuid,
     "created_at" timestamp with time zone DEFAULT now() NOT NULL)`],
   ["quizzes.assigned_to column", `ALTER TABLE "quizzes" ADD COLUMN IF NOT EXISTS "assigned_to" jsonb DEFAULT '[]'::jsonb NOT NULL`],
+  ["quizzes.study_notes column", `ALTER TABLE "quizzes" ADD COLUMN IF NOT EXISTS "study_notes" text DEFAULT '' NOT NULL`],
+  ["quizzes.family_id column", `ALTER TABLE "quizzes" ADD COLUMN IF NOT EXISTS "family_id" uuid`],
   ["questions table", `CREATE TABLE IF NOT EXISTS "questions" (
     "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
     "quiz_id" uuid NOT NULL,
@@ -30,7 +34,9 @@ const steps = [
     "prompt" text NOT NULL,
     "choices" jsonb NOT NULL,
     "answer_index" integer NOT NULL,
-    "explanation" text DEFAULT '' NOT NULL)`],
+    "explanation" text DEFAULT '' NOT NULL,
+    "topic" text DEFAULT '' NOT NULL)`],
+  ["questions.topic column", `ALTER TABLE "questions" ADD COLUMN IF NOT EXISTS "topic" text DEFAULT '' NOT NULL`],
   ["attempts table", `CREATE TABLE IF NOT EXISTS "attempts" (
     "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
     "quiz_id" uuid,

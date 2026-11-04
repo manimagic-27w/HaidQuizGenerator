@@ -45,6 +45,14 @@ DATABASE_URL="<your Neon connection string>" npm run db:push
 npm run dev
 ```
 
+## Study notes and next rounds
+
+When a quiz is made from uploaded pages, Claude also writes a detailed outline of the study guide (terms, definitions, facts, steps) and tags every question with a topic. Both are saved with the quiz; you can read and correct the notes on the review screen.
+
+**Next round** (Parent → Quizzes, or from an attempt's breakdown) writes 20 new questions from those notes, with no upload. It looks at every finished round from the same guide, collects the questions the student missed or skipped, and aims a share of the new questions (about half by default, adjustable) at those concepts from a different angle. The rest cover the rest of the guide. No earlier question is repeated. The review screen marks which new questions are on missed topics.
+
+Quizzes made before this feature have no notes; their next round is written from the earlier questions instead.
+
 ## Assigning quizzes
 
 Each quiz is assigned to every student or to specific students. Pick when you publish, or use **Assign** in the Parent dashboard's Quizzes list. A student appears in the picker once they've accepted their Clerk invite and signed in. Students only see and can open quizzes assigned to them.

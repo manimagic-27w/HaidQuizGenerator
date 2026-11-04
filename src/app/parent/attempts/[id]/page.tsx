@@ -36,6 +36,8 @@ export default async function AttemptDetail({ params }: { params: Promise<{ id: 
   if (m.idle > 0) notes.push(`${fmtDur(m.idle)} with no taps or keys for over a minute.`);
   if (m.changes) notes.push(`Changed answers ${m.changes} ${m.changes > 1 ? "times" : "time"}.`);
   if (a.sessions > 1) notes.push(`Taken across ${a.sessions} sittings.`);
+  const missedTopics = [...new Set(rows.filter((r) => r.ans.correct === false && r.q?.topic).map((r) => r.q!.topic))];
+  if (missedTopics.length) notes.push(`Missed topics: ${missedTopics.join(", ")}.`);
   const slow = rows.map((r) => r).sort((p, q) => q.ans.ms - p.ans.ms).slice(0, 3);
 
   return (
@@ -103,7 +105,10 @@ export default async function AttemptDetail({ params }: { params: Promise<{ id: 
             </p>
           ))}
         </div>
-        {a.status === "done" && <Link className="btn" href={`/results/${a.id}`} style={{ alignSelf: "flex-start" }}>See every answer</Link>}
+        <div className="row">
+          {a.status === "done" && <Link className="btn" href={`/results/${a.id}`}>See every answer</Link>}
+          {a.quizId && <Link className="btn primary" href={`/parent/quizzes/${a.quizId}/round`}>Make the next round</Link>}
+        </div>
       </section>
     </>
   );

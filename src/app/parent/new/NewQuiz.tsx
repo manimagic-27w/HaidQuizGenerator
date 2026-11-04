@@ -1,11 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import type { Draft } from "@/lib/generate";
-import { LETTERS } from "@/lib/metrics";
 import type { Student } from "@/lib/auth";
-import AssignPicker from "@/components/AssignPicker";
+import DraftReview from "@/components/DraftReview";
 
 type Picked = { file: File; preview: string | null };
 const MAX_EDGE = 1800; // px; keeps phone photos readable but small enough to upload
@@ -26,16 +24,13 @@ async function prepare(file: File): Promise<File> {
 }
 
 export default function NewQuiz({ students }: { students: Student[] }) {
-  const router = useRouter();
   const [picked, setPicked] = useState<Picked[]>([]);
   const [focus, setFocus] = useState("");
   const [busy, setBusy] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState("");
   const [draft, setDraft] = useState<Draft | null>(null);
-  const [publishing, setPublishing] = useState(false);
   const [over, setOver] = useState(false);
-  const [assignedTo, setAssignedTo] = useState<string[]>(students.length === 1 ? [students[0].id] : []);
   const ctl = useRef<AbortController | null>(null);
 
   useEffect(() => () => picked.forEach((p) => p.preview && URL.revokeObjectURL(p.preview)), [picked]);
@@ -71,55 +66,9 @@ export default function NewQuiz({ students }: { students: Student[] }) {
     }
   }
 
-  async function publish() {
-    if (!draft) return;
-    setPublishing(true); setError("");
-    const res = await fetch("/api/quizzes", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...draft, assignedTo }) });
-    if (res.ok) { router.push("/parent"); router.refresh(); return; }
-    const data = await res.json().catch(() => ({}));
-    setError(data.error || "Couldn't publish the quiz. Try again.");
-    setPublishing(false);
-  }
-
-  const editQ = (i: number, patch: Partial<Draft["questions"][number]>) =>
-    setDraft((d) => d && { ...d, questions: d.questions.map((q, j) => (j === i ? { ...q, ...patch } : q)) });
-
   if (draft) {
-    return (
-      <section className="sheet stack">
-        <div className="spread"><h2>Check the questions</h2><span className="pill info">{draft.questions.length} questions</span></div>
-        <p className="small muted">Edit anything that&apos;s off, pick a different correct answer with the circle, or remove a question. Answer order is shuffled when you publish.</p>
-        <div className="row">
-          <div className="field"><label className="label" htmlFor="title">Title</label>
-            <input id="title" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} /></div>
-          <div className="field" style={{ maxWidth: 200 }}><label className="label" htmlFor="subject">Subject</label>
-            <input id="subject" value={draft.subject} onChange={(e) => setDraft({ ...draft, subject: e.target.value })} /></div>
-        </div>
-        <div>
-          {draft.questions.map((q, i) => (
-            <div className="dq" key={i}>
-              <div className="spread"><span className="qnum">Q{i + 1}</span>
-                <button className="btn ghost sm" onClick={() => setDraft({ ...draft, questions: draft.questions.filter((_, j) => j !== i) })}>Remove</button></div>
-              <div className="field"><textarea id={`q${i}`} rows={2} value={q.prompt} aria-label={`Question ${i + 1}`} onChange={(e) => editQ(i, { prompt: e.target.value })} /></div>
-              {q.choices.map((c, j) => (
-                <label className={`opt ${j === q.answerIndex ? "correct" : ""}`} key={j}>
-                  <input type="radio" name={`ans${i}`} checked={j === q.answerIndex} onChange={() => editQ(i, { answerIndex: j })} aria-label={`Mark ${LETTERS[j]} correct`} />
-                  <span className="mono small">{LETTERS[j]}</span>
-                  <input type="text" value={c} onChange={(e) => editQ(i, { choices: q.choices.map((x, k) => (k === j ? e.target.value : x)) })} />
-                </label>
-              ))}
-              {q.explanation && <p className="small muted">{q.explanation}</p>}
-            </div>
-          ))}
-        </div>
-        <AssignPicker students={students} value={assignedTo} onChange={setAssignedTo} idPrefix="new" />
-        {error && <p className="err small">{error}</p>}
-        <div className="row">
-          <button className="btn primary" disabled={publishing || !draft.questions.length} onClick={publish}>{publishing ? "Publishing…" : "Publish quiz"}</button>
-          <button className="btn" onClick={() => setDraft(null)} disabled={publishing}>Start over</button>
-        </div>
-      </section>
-    );
+    return <DraftReview initial={draft} students={students} onDiscard={() => setDraft(null)}
+      defaultAssignees={students.length === 1 ? [students[0].id] : []} />;
   }
 
   return (

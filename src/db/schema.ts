@@ -11,6 +11,10 @@ export const quizzes = pgTable("quizzes", {
   archived: boolean("archived").notNull().default(false),
   // Clerk user ids of the students who should see this quiz; empty means every student
   assignedTo: jsonb("assigned_to").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+  // outline of the original study guide, written when the first quiz was made; later rounds are written from it
+  studyNotes: text("study_notes").notNull().default(""),
+  // the first quiz in a series of rounds from the same study guide (null on that first quiz itself)
+  familyId: uuid("family_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -22,6 +26,7 @@ export const questions = pgTable("questions", {
   choices: jsonb("choices").$type<string[]>().notNull(),
   answerIndex: integer("answer_index").notNull(),
   explanation: text("explanation").notNull().default(""),
+  topic: text("topic").notNull().default(""),
 }, (t) => [index("questions_quiz_idx").on(t.quizId)]);
 
 export const attempts = pgTable("attempts", {
