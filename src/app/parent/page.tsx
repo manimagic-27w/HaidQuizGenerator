@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { desc, eq, inArray, sql } from "drizzle-orm";
 import { db, attempts, attemptAnswers, quizzes, questions } from "@/db";
-import { requireParent } from "@/lib/auth";
+import { listStudents, requireParent } from "@/lib/auth";
 import { IDLE_MS, fmtDur, fmtSec, fmtWhen, metrics } from "@/lib/metrics";
 import QuizManager from "./QuizManager";
 
@@ -9,11 +9,12 @@ export const dynamic = "force-dynamic";
 
 export default async function ParentPage() {
   await requireParent();
+  const students = await listStudents();
   const list = await db.select().from(attempts).orderBy(desc(attempts.startedAt)).limit(300);
   const ans = list.length ? await db.select().from(attemptAnswers).where(inArray(attemptAnswers.attemptId, list.map((a) => a.id))) : [];
   const rows = list.map((a) => ({ a, m: metrics({ ...a, answers: ans.filter((x) => x.attemptId === a.id) }) }));
   const quizList = await db
-    .select({ id: quizzes.id, title: quizzes.title, archived: quizzes.archived, count: sql<number>`count(distinct ${questions.id})::int` })
+    .select({ id: quizzes.id, title: quizzes.title, archived: quizzes.archived, assignedTo: quizzes.assignedTo, count: sql<number>`count(distinct ${questions.id})::int` })
     .from(quizzes).leftJoin(questions, eq(questions.quizId, quizzes.id)).groupBy(quizzes.id).orderBy(desc(quizzes.createdAt));
   const finishedByQuiz = Object.fromEntries(quizList.map((q) => [q.id, list.filter((a) => a.quizId === q.id && a.status === "done").length]));
 
@@ -29,7 +30,7 @@ export default async function ParentPage() {
     ["Rushed answers", `${Math.round((100 * sum("rushed")) / Math.max(1, answered))}%`],
     ["Away or idle", fmtDur(sum("away") + sum("idle"))],
   ] : [];
-  const students = new Set(list.map((a) => a.studentId));
+  const takers = new Set(list.map((a) => a.studentId));
 
   return (
     <>
@@ -54,14 +55,14 @@ export default async function ParentPage() {
           <div className="tablebox">
             <table>
               <thead><tr>
-                <th>When</th>{students.size > 1 && <th>Student</th>}<th>Quiz</th><th className="n">Score</th><th className="n">Total</th>
+                <th>When</th>{takers.size > 1 && <th>Student</th>}<th>Quiz</th><th className="n">Score</th><th className="n">Total</th>
                 <th className="n">Focused</th><th className="n">Per Q</th><th className="n">Rushed</th><th className="n">Left page</th><th>Effort</th>
               </tr></thead>
               <tbody>
                 {rows.map(({ a, m }) => (
                   <tr key={a.id}>
                     <td><Link href={`/parent/attempts/${a.id}`}>{fmtWhen(a.startedAt)}</Link></td>
-                    {students.size > 1 && <td>{a.studentName || "Student"}</td>}
+                    {takers.size > 1 && <td>{students.find((s) => s.id === a.studentId)?.name || a.studentName || "Student"}</td>}
                     <td>{a.quizTitle}</td>
                     <td className="n">{m.pct != null ? `${a.score}/${a.total}` : `${m.answered}/${a.total}`}</td>
                     <td className="n">{fmtDur(m.total)}</td>
@@ -79,7 +80,7 @@ export default async function ParentPage() {
         </section>
       )}
 
-      <QuizManager quizzes={quizList.map((q) => ({ ...q, finished: finishedByQuiz[q.id] || 0 }))} />
+      <QuizManager students={students} quizzes={quizList.map((q) => ({ ...q, finished: finishedByQuiz[q.id] || 0 }))} />
     </>
   );
 }

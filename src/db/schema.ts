@@ -1,6 +1,7 @@
 import {
   pgTable, uuid, text, integer, boolean, timestamp, jsonb, primaryKey, index,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 export const quizzes = pgTable("quizzes", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -8,6 +9,8 @@ export const quizzes = pgTable("quizzes", {
   subject: text("subject").notNull().default(""),
   createdBy: text("created_by").notNull(),
   archived: boolean("archived").notNull().default(false),
+  // Clerk user ids of the students who should see this quiz; empty means every student
+  assignedTo: jsonb("assigned_to").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

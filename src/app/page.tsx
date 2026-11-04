@@ -1,16 +1,17 @@
 import Link from "next/link";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { db, quizzes, questions, attempts } from "@/db";
-import { requireViewer } from "@/lib/auth";
+import { canSee, requireViewer } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const viewer = await requireViewer();
-  const list = await db
-    .select({ id: quizzes.id, title: quizzes.title, subject: quizzes.subject, createdAt: quizzes.createdAt, count: sql<number>`count(${questions.id})::int` })
+  const all = await db
+    .select({ id: quizzes.id, title: quizzes.title, subject: quizzes.subject, createdAt: quizzes.createdAt, assignedTo: quizzes.assignedTo, count: sql<number>`count(${questions.id})::int` })
     .from(quizzes).leftJoin(questions, eq(questions.quizId, quizzes.id))
     .where(eq(quizzes.archived, false)).groupBy(quizzes.id).orderBy(desc(quizzes.createdAt));
+  const list = viewer.isParent ? all : all.filter((q) => canSee(q.assignedTo, viewer.id));
   const mine = viewer.isParent ? [] : await db.select({
     quizId: attempts.quizId, status: attempts.status, score: attempts.score, total: attempts.total,
   }).from(attempts).where(and(eq(attempts.studentId, viewer.id)));
@@ -21,7 +22,7 @@ export default async function Home() {
         <h1>{viewer.isParent ? "Quizzes" : `Ready to study${viewer.name ? `, ${viewer.name}` : ""}?`}</h1>
         <p className="muted">
           {viewer.isParent
-            ? "This is the list your student sees. Opening a quiz from your account is a preview and isn’t recorded."
+            ? "Every active quiz. Each student only sees the ones assigned to them. Opening a quiz from your account is a preview and isn’t recorded."
             : "Pick a quiz. Take your time and read every choice before you answer."}
         </p>
       </section>

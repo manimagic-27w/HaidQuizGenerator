@@ -45,6 +45,14 @@ DATABASE_URL="<your Neon connection string>" npm run db:push
 npm run dev
 ```
 
+## Assigning quizzes
+
+Each quiz is assigned to every student or to specific students. Pick when you publish, or use **Assign** in the Parent dashboard's Quizzes list. A student appears in the picker once they've accepted their Clerk invite and signed in. Students only see and can open quizzes assigned to them.
+
+## Database changes
+
+After pulling a change to `src/db/schema.ts`, run `DATABASE_URL="<Neon string>" npm run db:push` again to update the tables.
+
 ## Upload limits
 
 Photos are resized in the browser before upload. Vercel limits a request to 4.5 MB, so a large scanned PDF may need to be split or compressed. Quiz writing usually takes one to two minutes; the route allows up to 5 minutes (`maxDuration` in `src/app/api/generate/route.ts`).

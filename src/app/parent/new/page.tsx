@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { requireParent } from "@/lib/auth";
+import { listStudents, requireParent } from "@/lib/auth";
 import NewQuiz from "./NewQuiz";
 
 export default async function NewQuizPage() {
   await requireParent();
+  const students = await listStudents();
   return (
     <>
       <section className="stack">
@@ -11,7 +12,7 @@ export default async function NewQuizPage() {
         <h1>New quiz</h1>
         <p className="muted">Upload photos of the study guide or a PDF. Claude writes 20 questions, you check them, then publish.</p>
       </section>
-      <NewQuiz />
+      <NewQuiz students={students} />
     </>
   );
 }

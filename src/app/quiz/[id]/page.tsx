@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { and, asc, eq } from "drizzle-orm";
 import { db, quizzes, questions, attempts, attemptAnswers } from "@/db";
-import { requireViewer } from "@/lib/auth";
+import { canSee, requireViewer } from "@/lib/auth";
 import QuizPlayer, { type PlayerAnswer } from "./QuizPlayer";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +11,7 @@ export default async function QuizPage({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const [quiz] = await db.select().from(quizzes).where(eq(quizzes.id, id));
-  if (!quiz || (quiz.archived && !viewer.isParent)) notFound();
+  if (!quiz || (!viewer.isParent && (quiz.archived || !canSee(quiz.assignedTo, viewer.id)))) notFound();
   const qs = await db.select().from(questions).where(eq(questions.quizId, id)).orderBy(asc(questions.position));
   if (!qs.length) notFound();
 

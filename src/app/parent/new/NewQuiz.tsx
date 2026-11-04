@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Draft } from "@/lib/generate";
 import { LETTERS } from "@/lib/metrics";
+import type { Student } from "@/lib/auth";
+import AssignPicker from "@/components/AssignPicker";
 
 type Picked = { file: File; preview: string | null };
 const MAX_EDGE = 1800; // px; keeps phone photos readable but small enough to upload
@@ -23,7 +25,7 @@ async function prepare(file: File): Promise<File> {
   return blob ? new File([blob], file.name.replace(/\.\w+$/, "") + ".jpg", { type: "image/jpeg" }) : file;
 }
 
-export default function NewQuiz() {
+export default function NewQuiz({ students }: { students: Student[] }) {
   const router = useRouter();
   const [picked, setPicked] = useState<Picked[]>([]);
   const [focus, setFocus] = useState("");
@@ -33,6 +35,7 @@ export default function NewQuiz() {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [publishing, setPublishing] = useState(false);
   const [over, setOver] = useState(false);
+  const [assignedTo, setAssignedTo] = useState<string[]>(students.length === 1 ? [students[0].id] : []);
   const ctl = useRef<AbortController | null>(null);
 
   useEffect(() => () => picked.forEach((p) => p.preview && URL.revokeObjectURL(p.preview)), [picked]);
@@ -71,7 +74,7 @@ export default function NewQuiz() {
   async function publish() {
     if (!draft) return;
     setPublishing(true); setError("");
-    const res = await fetch("/api/quizzes", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(draft) });
+    const res = await fetch("/api/quizzes", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...draft, assignedTo }) });
     if (res.ok) { router.push("/parent"); router.refresh(); return; }
     const data = await res.json().catch(() => ({}));
     setError(data.error || "Couldn't publish the quiz. Try again.");
@@ -109,6 +112,7 @@ export default function NewQuiz() {
             </div>
           ))}
         </div>
+        <AssignPicker students={students} value={assignedTo} onChange={setAssignedTo} idPrefix="new" />
         {error && <p className="err small">{error}</p>}
         <div className="row">
           <button className="btn primary" disabled={publishing || !draft.questions.length} onClick={publish}>{publishing ? "Publishing…" : "Publish quiz"}</button>
