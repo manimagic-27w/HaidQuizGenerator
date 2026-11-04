@@ -22,9 +22,11 @@
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "drizzle-kit": "^0.31.11",
+    "pg": "^8.23.1",
     "typescript": "^5.9.3"
   },
   "private": true
