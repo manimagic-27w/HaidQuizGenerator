@@ -1,4 +1,9 @@
 import { defineConfig } from "drizzle-kit";
+import { neonConfig } from "@neondatabase/serverless";
+import ws from "ws";
+
+// drizzle-kit talks to Neon over a WebSocket; older Node versions don't have one built in.
+neonConfig.webSocketConstructor = ws;
 
 // Read DATABASE_URL from .env.local (or .env) so `npm run db:push` needs no extra typing.
 for (const file of [".env.local", ".env"]) {
