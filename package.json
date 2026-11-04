@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "db:push": "drizzle-kit push",
+    "db:push": "node scripts/db-update.mjs",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {

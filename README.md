@@ -28,7 +28,7 @@ The answer key never reaches the student's browser. Grading happens on the serve
    - Recommended: in Clerk → Restrictions, turn on the allowlist and add only your family's email addresses, so nobody else can sign up.
 4. **Set the parent.** Add `PARENT_EMAILS` with your email (comma-separate to add another parent). Anyone else who signs in is a student.
 5. **Add the Claude API key.** Create a key at console.anthropic.com and set `ANTHROPIC_API_KEY`. Optional: `ANTHROPIC_MODEL` to change the model (defaults to `claude-sonnet-5-5`).
-6. **Create the tables.** On your machine:
+6. **Create the tables.** On your machine (safe to re-run any time):
    ```bash
    npm install
    DATABASE_URL="<your Neon connection string>" npm run db:push
