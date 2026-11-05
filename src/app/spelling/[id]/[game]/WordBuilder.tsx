@@ -66,9 +66,9 @@ export default function WordBuilder({ word, api, solved }: { word: string; api: 
           </div>
         ))}
       </div>
-      <div className="tiles">
+      <div className="letter-tiles">
         {tiles.map((t) => (
-          <button key={t.id} className={`tile ${t.used ? "used" : ""} ${shake === t.id ? "shake" : ""} ${glow === t.id ? "glow" : ""}`}
+          <button key={t.id} className={`ltile ${t.used ? "used" : ""} ${shake === t.id ? "shake" : ""} ${glow === t.id ? "glow" : ""}`}
             disabled={t.used || done || solved} onClick={() => pick(t)} aria-label={`Letter ${t.ch}`}>{t.ch}</button>
         ))}
       </div>
