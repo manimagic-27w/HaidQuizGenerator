@@ -53,6 +53,19 @@ When a quiz is made from uploaded pages, Claude also writes a detailed outline o
 
 Quizzes made before this feature have no notes; their next round is written from the earlier questions instead.
 
+## Spelling games
+
+**Parent → New spelling list**: type or paste the words, or add a photo/PDF of the list from school. Claude writes a kid-friendly sentence and meaning for each word and marks its tricky letters (double letters, silent letters, vowel teams, -tion…). On the review screen you can fix any word and tap letters to change which ones are hidden. Assign the list like a quiz.
+
+Each list has two games, read aloud with the browser's built-in voice:
+
+- **Word Builder**: hear the word, tap scrambled letter tiles in order. Two or three decoy letters (easy mix-ups like c/k/s) are mixed in. Wrong tiles shake and bounce back. Typing on a keyboard works too.
+- **Missing Letters**: the word with its tricky letters blanked. Fill them in; two wrong tries show the answer.
+
+Any word with a slip comes back once at the end of the game. The sentence clue is shown with the word hidden.
+
+**Progress** (Parent dashboard → Spelling → Progress) shows each word as Not tried, Practicing, or Mastered (right on the first try the last two times), the actual misspellings, and every game with time, hints and time away.
+
 ## Assigning quizzes
 
 Each quiz is assigned to every student or to specific students. Pick when you publish, or use **Assign** in the Parent dashboard's Quizzes list. A student appears in the picker once they've accepted their Clerk invite and signed in. Students only see and can open quizzes assigned to them.

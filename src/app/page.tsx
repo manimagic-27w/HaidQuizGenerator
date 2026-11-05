@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { and, desc, eq, sql } from "drizzle-orm";
-import { db, quizzes, questions, attempts } from "@/db";
+import { db, quizzes, questions, attempts, spellingLists, spellingWords } from "@/db";
 import { canSee, requireViewer } from "@/lib/auth";
+import { GAMES, type Game } from "@/lib/spelling";
+import { summarize, wordProgress } from "@/lib/spellingProgress";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +14,12 @@ export default async function Home() {
     .from(quizzes).leftJoin(questions, eq(questions.quizId, quizzes.id))
     .where(eq(quizzes.archived, false)).groupBy(quizzes.id).orderBy(desc(quizzes.createdAt));
   const list = viewer.isParent ? all : all.filter((q) => canSee(q.assignedTo, viewer.id));
+  const allSpelling = await db
+    .select({ id: spellingLists.id, title: spellingLists.title, assignedTo: spellingLists.assignedTo, createdAt: spellingLists.createdAt, count: sql<number>`count(${spellingWords.id})::int` })
+    .from(spellingLists).leftJoin(spellingWords, eq(spellingWords.listId, spellingLists.id))
+    .where(eq(spellingLists.archived, false)).groupBy(spellingLists.id).orderBy(desc(spellingLists.createdAt));
+  const spelling = viewer.isParent ? allSpelling : allSpelling.filter((l) => canSee(l.assignedTo, viewer.id));
+  const spellProg = viewer.isParent ? new Map() : await wordProgress(spelling.map((l) => l.id), viewer.id);
   const mine = viewer.isParent ? [] : await db.select({
     quizId: attempts.quizId, status: attempts.status, score: attempts.score, total: attempts.total,
   }).from(attempts).where(and(eq(attempts.studentId, viewer.id)));
@@ -23,10 +31,10 @@ export default async function Home() {
         <p className="muted">
           {viewer.isParent
             ? "Every active quiz. Each student only sees the ones assigned to them. Opening a quiz from your account is a preview and isn’t recorded."
-            : "Pick a quiz. Take your time and read every choice before you answer."}
+            : spelling.length && !list.length ? "Pick a spelling game. Turn your sound on!" : "Pick a quiz or a spelling game. Take your time."}
         </p>
       </section>
-      {!list.length ? (
+      {!list.length && (spelling.length && !viewer.isParent) ? null : !list.length ? (
         <div className="notice">
           <h3>No quizzes yet</h3>
           <p className="small" style={{ marginTop: 6 }}>
@@ -57,6 +65,34 @@ export default async function Home() {
             );
           })}
         </div>
+      )}
+      {spelling.length > 0 && (
+        <section className="stack">
+          <h2>Spelling</h2>
+          <div className="qlist">
+            {spelling.map((l) => {
+              const sum = summarize(spellProg.get(l.id) || []);
+              return (
+                <article className="sheet qcard" key={l.id}>
+                  <div><span className="pill hi">Spelling</span></div>
+                  <h3>{l.title}</h3>
+                  <p className="small muted">{l.count} words{!viewer.isParent && sum.total ? <> · <b className="mono">{sum.mastered}</b> mastered</> : null}</p>
+                  {!viewer.isParent && sum.total > 0 && (
+                    <div className="mbar" aria-hidden="true">
+                      <i className="m" style={{ width: `${(100 * sum.mastered) / sum.total}%` }} />
+                      <i className="l" style={{ width: `${(100 * sum.learning) / sum.total}%` }} />
+                    </div>
+                  )}
+                  <div className="foot">
+                    {(Object.keys(GAMES) as Game[]).map((g, i) => (
+                      <Link key={g} prefetch={false} href={`/spelling/${l.id}/${g}`} className={`btn sm ${i === 0 ? "primary" : ""}`}>{GAMES[g].name}</Link>
+                    ))}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
       )}
     </>
   );

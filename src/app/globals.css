@@ -166,3 +166,69 @@ td a { color: var(--ink); font-weight: 600; }
 .topics { display: flex; flex-wrap: wrap; gap: 6px; }
 .range { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .range input { flex: 1 1 200px; accent-color: var(--accent); }
+
+/* ---------- spelling ---------- */
+.mbar { display: flex; height: 8px; border-radius: 99px; overflow: hidden; background: var(--rule); }
+.mbar .m { background: var(--good); }
+.mbar .l { background: var(--warn); }
+
+/* import review */
+.sw { display: flex; flex-direction: column; gap: 8px; padding: 14px 0; border-bottom: 1px solid var(--rule); }
+.sw:last-child { border-bottom: none; }
+.sw-word { font: 700 18px/1.2 var(--f-display), system-ui, sans-serif; border: 1px solid var(--rule); background: var(--paper); border-radius: 8px; padding: 6px 10px; min-width: 0; width: 220px; max-width: 100%; }
+.tricky { display: flex; flex-wrap: wrap; gap: 4px; }
+.tl { min-width: 30px; height: 34px; border-radius: 6px; border: 1px solid var(--rule); background: var(--card); font: 600 16px var(--f-mono), monospace; cursor: pointer; display: inline-grid; place-items: center; padding: 0 4px; }
+.tl.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.tl.fixed { cursor: default; border-color: transparent; background: transparent; }
+
+/* game */
+.btn.big { font-size: 20px; padding: 14px 40px; min-height: 56px; border-radius: 14px; }
+.sp-intro { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 14px; padding-block: 28px; }
+.sp-intro h1 { font-size: clamp(34px, 8vw, 52px); }
+.sp-intro p { max-width: 46ch; }
+.sp-card { container-type: inline-size; background: var(--card); border: 1px solid var(--rule); border-radius: 18px; padding: 22px 16px 26px; display: flex; flex-direction: column; gap: 16px; position: relative; }
+.btn.say { gap: 8px; font-size: 17px; }
+.clue { text-align: center; font-size: 18px; font-style: italic; text-wrap: balance; max-width: 40ch; margin: 0 auto; }
+/* letter boxes shrink with word length (--n letters) so the whole word stays on one line */
+.slots { --n: 8; --gap: clamp(3px, 1.2cqw, 6px); --w: min(50px, calc((100cqw - 8px - (var(--n) - 1) * var(--gap)) / var(--n)));
+  display: flex; flex-direction: column; align-items: center; gap: calc(var(--gap) * 2); max-width: 100%; }
+.slot-row { display: flex; flex-wrap: nowrap; justify-content: center; gap: var(--gap); }
+.slot { width: var(--w); height: calc(var(--w) * 1.25); flex: none; border-radius: min(10px, calc(var(--w) * .22)); display: grid; place-items: center;
+  font: 700 calc(var(--w) * .62)/1 var(--f-display), system-ui, sans-serif; border: 2px dashed var(--rule); background: var(--paper); color: var(--ink); text-align: center; padding: 0; }
+.slot.cur { border-color: var(--accent); border-style: solid; }
+.slot.filled { border-style: solid; border-color: var(--good); background: var(--good-soft); animation: pop .2s ease-out; }
+.slot.given { border: 2px solid transparent; background: transparent; }
+.slot.fixed { width: calc(var(--w) * .45); border: none; background: transparent; }
+.slot.blank { border-style: solid; border-color: var(--accent); background: var(--accent-soft); caret-color: var(--accent); outline: none; }
+.slot.blank:focus { box-shadow: 0 0 0 3px var(--accent); }
+.slot.blank.bad { border-color: var(--bad); background: var(--bad-soft); }
+.slot.blank.hinted { border-color: var(--warn); background: var(--warn-soft); }
+.slot.answer { border: 2px solid var(--accent); background: var(--accent-soft); color: var(--accent); }
+.slots.win .slot.filled, .slots.win .slot.blank { border-color: var(--good); background: var(--good-soft); }
+.slots.win { animation: bounce .5s ease-out; }
+.tiles { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; max-width: 560px; }
+.tile { width: clamp(46px, 12vw, 58px); height: clamp(46px, 12vw, 58px); border-radius: 12px; border: 2px solid var(--rule); border-bottom-width: 5px;
+  background: var(--card); font: 700 clamp(22px, 6vw, 28px)/1 var(--f-display), system-ui, sans-serif; cursor: pointer; transition: transform .1s; }
+.tile:hover:not(:disabled) { transform: translateY(-2px); border-color: var(--accent); }
+.tile:active:not(:disabled) { transform: translateY(2px); border-bottom-width: 2px; }
+.tile.used { opacity: 0; pointer-events: none; transform: scale(.6); transition: opacity .2s, transform .2s; }
+.tile.glow { border-color: var(--warn); background: var(--warn-soft); animation: pulse .8s ease-in-out infinite; }
+.shake { animation: shake .4s; }
+.tile.shake { border-color: var(--bad); background: var(--bad-soft); }
+.cheer { min-height: 34px; text-align: center; }
+.cheer span { display: inline-block; font: 800 26px var(--f-display), system-ui, sans-serif; color: var(--good); animation: rise .5s ease-out; }
+.streak { animation: pop .3s ease-out; }
+.sp-done { align-items: center; text-align: center; }
+.stars { display: flex; gap: 8px; font-size: 52px; line-height: 1; }
+.stars span { color: var(--rule); }
+.stars span.on { color: var(--hi); text-shadow: 0 2px 0 var(--warn); animation: pop .4s ease-out backwards; }
+.stars span.on:nth-child(2) { animation-delay: .15s; }
+.stars span.on:nth-child(3) { animation-delay: .3s; }
+.sp-done .topics { justify-content: center; }
+.sp-done .topics .pill { cursor: pointer; border: none; font: inherit; font-size: 15px; font-weight: 600; padding: 5px 12px; }
+@keyframes shake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-7px); } 40% { transform: translateX(7px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(4px); } }
+@keyframes pop { 0% { transform: scale(.7); } 70% { transform: scale(1.12); } 100% { transform: scale(1); } }
+@keyframes bounce { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-10px); } }
+@keyframes rise { from { transform: translateY(10px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes pulse { 50% { transform: scale(1.08); } }
+@media (prefers-reduced-motion: reduce) { .shake, .slots.win, .tile.glow, .stars span.on, .cheer span, .slot.filled, .streak { animation: none !important; } }

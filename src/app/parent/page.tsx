@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { desc, eq, inArray, sql } from "drizzle-orm";
-import { db, attempts, attemptAnswers, quizzes, questions } from "@/db";
+import { db, attempts, attemptAnswers, quizzes, questions, spellingLists, spellingWords, spellingSessions } from "@/db";
 import { listStudents, requireParent } from "@/lib/auth";
 import { IDLE_MS, fmtDur, fmtSec, fmtWhen, metrics } from "@/lib/metrics";
 import QuizManager from "./QuizManager";
+import SpellingManager from "./SpellingManager";
+import { summarize, wordProgress } from "@/lib/spellingProgress";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +34,21 @@ export default async function ParentPage() {
   ] : [];
   const takers = new Set(list.map((a) => a.studentId));
 
+  // Spelling lists with each player's mastered count
+  const sLists = await db
+    .select({ id: spellingLists.id, title: spellingLists.title, archived: spellingLists.archived, assignedTo: spellingLists.assignedTo, count: sql<number>`count(${spellingWords.id})::int` })
+    .from(spellingLists).leftJoin(spellingWords, eq(spellingWords.listId, spellingLists.id))
+    .groupBy(spellingLists.id).orderBy(desc(spellingLists.createdAt));
+  const players = sLists.length ? await db.selectDistinct({ id: spellingSessions.studentId, name: spellingSessions.studentName })
+    .from(spellingSessions).where(inArray(spellingSessions.listId, sLists.map((l) => l.id))) : [];
+  const byPlayer = await Promise.all(players.map(async (p) => ({ p, prog: await wordProgress(sLists.map((l) => l.id), p.id) })));
+  const spelling = sLists.map((l) => ({
+    ...l,
+    progress: byPlayer.filter(({ prog }) => (prog.get(l.id) || []).some((w) => w.tries)).map(({ p, prog }) => ({
+      name: students.find((s) => s.id === p.id)?.name || p.name || "Student", mastered: summarize(prog.get(l.id) || []).mastered,
+    })),
+  }));
+
   return (
     <>
       <section className="spread">
@@ -39,7 +56,10 @@ export default async function ParentPage() {
           <h1>Parent view</h1>
           <p className="muted">How the study time is being spent.</p>
         </div>
-        <Link className="btn primary" href="/parent/new">New quiz from study guide</Link>
+        <div className="row">
+          <Link className="btn primary" href="/parent/new">New quiz from study guide</Link>
+          <Link className="btn" href="/parent/spelling/new">New spelling list</Link>
+        </div>
       </section>
 
       <section className="stack">
@@ -81,6 +101,7 @@ export default async function ParentPage() {
       )}
 
       <QuizManager students={students} quizzes={quizList.map((q) => ({ ...q, finished: finishedByQuiz[q.id] || 0 }))} />
+      <SpellingManager students={students} lists={spelling} />
     </>
   );
 }

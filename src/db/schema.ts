@@ -64,3 +64,60 @@ export type Quiz = typeof quizzes.$inferSelect;
 export type Question = typeof questions.$inferSelect;
 export type Attempt = typeof attempts.$inferSelect;
 export type AttemptAnswer = typeof attemptAnswers.$inferSelect;
+
+/* ---------- spelling ---------- */
+
+export const spellingLists = pgTable("spelling_lists", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  title: text("title").notNull(),
+  createdBy: text("created_by").notNull(),
+  archived: boolean("archived").notNull().default(false),
+  assignedTo: jsonb("assigned_to").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const spellingWords = pgTable("spelling_words", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  listId: uuid("list_id").notNull().references(() => spellingLists.id, { onDelete: "cascade" }),
+  position: integer("position").notNull(),
+  word: text("word").notNull(),
+  sentence: text("sentence").notNull().default(""),
+  meaning: text("meaning").notNull().default(""),
+  // indexes of the letters Missing Letters blanks out (the tricky parts)
+  tricky: jsonb("tricky").$type<number[]>().notNull().default(sql`'[]'::jsonb`),
+}, (t) => [index("spelling_words_list_idx").on(t.listId)]);
+
+export const spellingSessions = pgTable("spelling_sessions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  listId: uuid("list_id").references(() => spellingLists.id, { onDelete: "set null" }),
+  listTitle: text("list_title").notNull(),
+  studentId: text("student_id").notNull(),
+  studentName: text("student_name").notNull().default(""),
+  game: text("game", { enum: ["builder", "missing"] }).notNull(),
+  status: text("status", { enum: ["in_progress", "done"] }).notNull().default("in_progress"),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  finishedAt: timestamp("finished_at", { withTimezone: true }),
+  awayMs: integer("away_ms").notNull().default(0),
+  awayCount: integer("away_count").notNull().default(0),
+  idleMs: integer("idle_ms").notNull().default(0),
+  total: integer("total").notNull(),
+}, (t) => [index("spelling_sessions_student_idx").on(t.studentId), index("spelling_sessions_list_idx").on(t.listId)]);
+
+export const spellingResults = pgTable("spelling_results", {
+  sessionId: uuid("session_id").notNull().references(() => spellingSessions.id, { onDelete: "cascade" }),
+  position: integer("position").notNull(),
+  wordId: uuid("word_id").references(() => spellingWords.id, { onDelete: "set null" }),
+  word: text("word").notNull(),
+  firstTry: boolean("first_try").notNull(),
+  mistakes: integer("mistakes").notNull().default(0),
+  hints: integer("hints").notNull().default(0),
+  // what she got wrong: in Word Builder the letters so far plus the wrong tile ("nes…"); in Missing Letters the whole word as typed
+  wrong: jsonb("wrong").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+  ms: integer("ms").notNull().default(0),
+}, (t) => [primaryKey({ columns: [t.sessionId, t.position] })]);
+
+export type SpellingList = typeof spellingLists.$inferSelect;
+export type SpellingWord = typeof spellingWords.$inferSelect;
+export type SpellingSession = typeof spellingSessions.$inferSelect;
+export type SpellingResult = typeof spellingResults.$inferSelect;
