@@ -50,7 +50,7 @@ npm run dev
 Quiz Desk supports several families. Each family only sees its own quizzes, spelling lists and results.
 
 - **Site admin** (emails in `ADMIN_EMAILS`, or `PARENT_EMAILS` on older setups) gets a **Families** tab: create families, set each family's monthly limit, and add people by email as a parent or child. Adding an email sends a Clerk invitation, or links the account right away if that person has already signed up. You can also change roles, move someone to another family, or remove them.
-- **Parents** see the Parent dashboard for their own family only. **Children** see what's assigned to them.
+- **Parents** see the Parent dashboard for their own family only, and can invite their own children by email from its **Family** section (resend or cancel a pending invite, remove a child). Up to 12 people per family; only the site admin can add parents, move people between families or change limits. **Children** see what's assigned to them.
 - One family per person. Someone signed in but not in a family sees a "not set up yet" page.
 - **Monthly limit:** new quizzes, next rounds and spelling lists count against it (those use the Claude API). Blank = no limit. Resets on the 1st (Eastern time). Parents see how many are left on their dashboard.
 

@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { desc, eq, inArray, sql } from "drizzle-orm";
-import { db, attempts, attemptAnswers, quizzes, questions, spellingLists, spellingWords, spellingSessions } from "@/db";
+import { db, families, familyMembers, attempts, attemptAnswers, quizzes, questions, spellingLists, spellingWords, spellingSessions } from "@/db";
 import { listStudents, requireParent } from "@/lib/auth";
 import { IDLE_MS, fmtDur, fmtSec, fmtWhen, metrics } from "@/lib/metrics";
 import QuizManager from "./QuizManager";
+import FamilyPeople, { type Person } from "./FamilyPeople";
+import { clerkClient } from "@clerk/nextjs/server";
 import { allowance } from "@/lib/usage";
 import SpellingManager from "./SpellingManager";
 import { summarize, wordProgress } from "@/lib/spellingProgress";
@@ -15,6 +17,17 @@ export default async function ParentPage() {
   const fam = viewer.familyId;
   const students = await listStudents(fam);
   const allow = await allowance(fam);
+  const [famRow] = await db.select({ name: families.name }).from(families).where(eq(families.id, fam));
+  const memberRows = await db.select().from(familyMembers).where(eq(familyMembers.familyId, fam)).orderBy(familyMembers.createdAt);
+  const linked = memberRows.map((m) => m.userId).filter((x): x is string => !!x);
+  const clerkUsers = linked.length ? (await (await clerkClient()).users.getUserList({ userId: linked, limit: 100 })).data : [];
+  const people: Person[] = memberRows
+    .map((m) => {
+      const u = clerkUsers.find((x) => x.id === m.userId);
+      return { id: m.id, email: m.email, role: m.role, signedIn: !!m.userId, isYou: m.userId === viewer.id,
+        name: (u && [u.firstName, u.lastName].filter(Boolean).join(" ")) || "" };
+    })
+    .sort((a, b) => (a.role === b.role ? 0 : a.role === "parent" ? -1 : 1));
   const list = await db.select().from(attempts).where(eq(attempts.ownerFamilyId, fam)).orderBy(desc(attempts.startedAt)).limit(300);
   const ans = list.length ? await db.select().from(attemptAnswers).where(inArray(attemptAnswers.attemptId, list.map((a) => a.id))) : [];
   const rows = list.map((a) => ({ a, m: metrics({ ...a, answers: ans.filter((x) => x.attemptId === a.id) }) }));
@@ -111,6 +124,7 @@ export default async function ParentPage() {
 
       <QuizManager students={students} quizzes={quizList.map((q) => ({ ...q, finished: finishedByQuiz[q.id] || 0 }))} />
       <SpellingManager students={students} lists={spelling} />
+      <FamilyPeople familyName={famRow?.name || "Your family"} people={people} />
     </>
   );
 }

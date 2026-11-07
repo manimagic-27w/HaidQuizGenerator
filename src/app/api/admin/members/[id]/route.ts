@@ -3,6 +3,7 @@ import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { db, families, familyMembers } from "@/db";
 import { apiAdmin } from "@/lib/auth";
+import { revokeInvites } from "@/lib/members";
 
 type Ctx = { params: Promise<{ id: string }> };
 const schema = z.object({ role: z.enum(["parent", "child"]).optional(), familyId: z.string().uuid().optional() });
@@ -30,5 +31,6 @@ export async function DELETE(_req: Request, { params }: Ctx) {
   const [m] = await db.select().from(familyMembers).where(eq(familyMembers.id, id));
   if (m && m.userId === admin.id) return NextResponse.json({ error: "You can't remove yourself. Move yourself to another family instead." }, { status: 409 });
   await db.delete(familyMembers).where(eq(familyMembers.id, id));
+  if (m && !m.userId) await revokeInvites(m.email);
   return NextResponse.json({ ok: true });
 }
