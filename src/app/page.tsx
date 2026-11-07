@@ -22,7 +22,7 @@ export default async function Home() {
   const spellProg = viewer.isParent ? new Map() : await wordProgress(spelling.map((l) => l.id), viewer.id);
   const mine = viewer.isParent ? [] : await db.select({
     quizId: attempts.quizId, status: attempts.status, score: attempts.score, total: attempts.total,
-  }).from(attempts).where(and(eq(attempts.studentId, viewer.id)));
+  }).from(attempts).where(and(eq(attempts.studentId, viewer.id), eq(attempts.ownerFamilyId, viewer.familyId)));
 
   return (
     <>

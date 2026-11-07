@@ -15,7 +15,16 @@ let bootstrapped = false;
 export async function ensureBootstrap() {
   if (bootstrapped) return;
   const existing = await db.select({ id: families.id }).from(families).limit(1);
-  if (!existing.length) await createFirstFamily();
+  if (!existing.length) {
+    // Only an upgrade from the single-family version has unowned data. A fresh install (or one where every family
+    // was deleted) has none, so nobody is swept into a family automatically; the admin sets families up instead.
+    const unowned = await Promise.all([
+      db.select({ id: quizzes.id }).from(quizzes).where(isNull(quizzes.ownerFamilyId)).limit(1),
+      db.select({ id: spellingLists.id }).from(spellingLists).where(isNull(spellingLists.ownerFamilyId)).limit(1),
+      db.select({ id: attempts.id }).from(attempts).where(isNull(attempts.ownerFamilyId)).limit(1),
+    ]);
+    if (unowned.some((r) => r.length)) await createFirstFamily();
+  }
   // Stamp anything still unowned (no-op once done; reruns if an earlier attempt stopped partway).
   const [first] = await db.select({ id: families.id }).from(families).where(eq(families.id, FIRST_FAMILY_ID));
   if (first) {
@@ -34,9 +43,10 @@ async function createFirstFamily() {
   const client = await clerkClient();
   const { data } = await client.users.getUserList({ limit: 500 });
   const rows = data.flatMap((u) => {
-    const email = (u.primaryEmailAddress?.emailAddress || u.emailAddresses[0]?.emailAddress || "").toLowerCase();
+    const verified = u.emailAddresses.filter((e) => e.verification?.status === "verified");
+    const email = (verified.find((e) => e.id === u.primaryEmailAddressId) || verified[0])?.emailAddress.toLowerCase();
     if (!email) return [];
-    const isParent = u.emailAddresses.some((e) => parents.includes(e.emailAddress.toLowerCase()));
+    const isParent = verified.some((e) => parents.includes(e.emailAddress.toLowerCase()));
     return [{ familyId: FIRST_FAMILY_ID, email, userId: u.id, role: (isParent ? "parent" : "child") as "parent" | "child" }];
   });
   if (rows.length) await db.insert(familyMembers).values(rows).onConflictDoNothing();

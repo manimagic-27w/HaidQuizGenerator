@@ -1,17 +1,17 @@
 import { NextResponse } from "next/server";
 import { and, asc, eq } from "drizzle-orm";
 import { db, attempts, attemptAnswers, questions } from "@/db";
-import { getViewer } from "@/lib/auth";
+import { apiMember } from "@/lib/auth";
 import { ownOpenAttempt, progressSchema, saveProgress } from "@/lib/attempts";
 
 type Ctx = { params: Promise<{ id: string }> };
 
 /** Save the final answers and grade them on the server, where the answer key lives. */
 export async function POST(req: Request, { params }: Ctx) {
-  const viewer = await getViewer();
+  const viewer = await apiMember();
   if (!viewer) return NextResponse.json({ error: "Sign in again to submit." }, { status: 401 });
   const { id } = await params;
-  const attempt = await ownOpenAttempt(id, viewer.id);
+  const attempt = await ownOpenAttempt(id, viewer.id, viewer.familyId);
   if (!attempt) return NextResponse.json({ error: "This quiz was already submitted." }, { status: 409 });
   const parsed = progressSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Bad answer data." }, { status: 400 });

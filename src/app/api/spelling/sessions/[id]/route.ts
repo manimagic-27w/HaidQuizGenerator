@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { and, eq, sql } from "drizzle-orm";
-import { db, spellingSessions, spellingResults } from "@/db";
-import { getViewer } from "@/lib/auth";
+import { db, spellingSessions, spellingResults, spellingWords } from "@/db";
+import { apiMember } from "@/lib/auth";
 
 const schema = z.object({
   results: z.array(z.object({
@@ -25,18 +25,20 @@ type Ctx = { params: Promise<{ id: string }> };
 
 /** Save word results and timing as she plays; done: true closes the session. */
 export async function PATCH(req: Request, { params }: Ctx) {
-  const viewer = await getViewer();
+  const viewer = await apiMember();
   if (!viewer) return NextResponse.json({ error: "Sign in again to keep saving." }, { status: 401 });
   const { id } = await params;
   const [s] = await db.select().from(spellingSessions)
-    .where(and(eq(spellingSessions.id, id), eq(spellingSessions.studentId, viewer.id), eq(spellingSessions.status, "in_progress")));
+    .where(and(eq(spellingSessions.id, id), eq(spellingSessions.studentId, viewer.id), eq(spellingSessions.ownerFamilyId, viewer.familyId), eq(spellingSessions.status, "in_progress")));
   if (!s) return NextResponse.json({ error: "This game already ended." }, { status: 404 });
   const p = schema.safeParse(await req.json().catch(() => null));
   if (!p.success) return NextResponse.json({ error: "Bad data." }, { status: 400 });
   const d = p.data;
 
+  const listWords = s.listId ? await db.select({ id: spellingWords.id }).from(spellingWords).where(eq(spellingWords.listId, s.listId)) : [];
+  const allowed = new Set(listWords.map((w) => w.id));
   if (d.results.length) {
-    await db.insert(spellingResults).values(d.results.map((r) => ({ sessionId: id, ...r, ms: Math.round(r.ms) })))
+    await db.insert(spellingResults).values(d.results.map((r) => ({ sessionId: id, ...r, wordId: r.wordId && allowed.has(r.wordId) ? r.wordId : null, ms: Math.round(r.ms) })))
       .onConflictDoUpdate({
         target: [spellingResults.sessionId, spellingResults.position],
         set: {

@@ -21,8 +21,9 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
   if (!userId) return null;
   await ensureBootstrap();
   const user = await currentUser();
-  const emails = (user?.emailAddresses || []).map((e) => e.emailAddress.toLowerCase());
-  const email = (user?.primaryEmailAddress?.emailAddress || emails[0] || "").toLowerCase();
+  // Only verified addresses count, so nobody can claim an admin email or someone else's invite by adding it unverified.
+  const emails = (user?.emailAddresses || []).filter((e) => e.verification?.status === "verified").map((e) => e.emailAddress.toLowerCase());
+  const email = emails.includes((user?.primaryEmailAddress?.emailAddress || "").toLowerCase()) ? user!.primaryEmailAddress!.emailAddress.toLowerCase() : emails[0] || "";
 
   let [m] = await db.select().from(familyMembers).where(eq(familyMembers.userId, userId));
   if (!m && emails.length) {

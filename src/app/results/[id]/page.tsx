@@ -12,7 +12,7 @@ export default async function Results({ params }: { params: Promise<{ id: string
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const [a] = await db.select().from(attempts).where(eq(attempts.id, id));
-  if (!a || a.status !== "done" || (a.studentId !== viewer.id && !(viewer.isParent && a.ownerFamilyId === viewer.familyId))) notFound();
+  if (!a || a.status !== "done" || (a.ownerFamilyId !== viewer.familyId || (a.studentId !== viewer.id && !viewer.isParent))) notFound();
   const rows = await db.select({ ans: attemptAnswers, q: questions }).from(attemptAnswers)
     .leftJoin(questions, eq(questions.id, attemptAnswers.questionId))
     .where(eq(attemptAnswers.attemptId, id)).orderBy(asc(attemptAnswers.position));

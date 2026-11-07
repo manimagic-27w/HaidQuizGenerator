@@ -18,9 +18,9 @@ export const progressSchema = z.object({
 export type Progress = z.infer<typeof progressSchema>;
 
 /** The student's own attempt that is still open, or null. */
-export async function ownOpenAttempt(id: string, studentId: string): Promise<Attempt | null> {
+export async function ownOpenAttempt(id: string, studentId: string, familyId: string): Promise<Attempt | null> {
   const [a] = await db.select().from(attempts)
-    .where(and(eq(attempts.id, id), eq(attempts.studentId, studentId), eq(attempts.status, "in_progress")));
+    .where(and(eq(attempts.id, id), eq(attempts.studentId, studentId), eq(attempts.ownerFamilyId, familyId), eq(attempts.status, "in_progress")));
   return a ?? null;
 }
 
