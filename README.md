@@ -26,7 +26,7 @@ The answer key never reaches the student's browser. Grading happens on the serve
 2. **Add Neon.** In the Vercel project: Storage → Create → Neon. This sets `DATABASE_URL`.
 3. **Add Clerk.** Create a Clerk application (email sign-in is enough). Copy `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` into Vercel environment variables, and set `NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in`.
    - Recommended: in Clerk → Restrictions, turn on the allowlist and add only your family's email addresses, so nobody else can sign up.
-4. **Set the parent.** Add `PARENT_EMAILS` with your email (comma-separate to add another parent). Anyone else who signs in is a student.
+4. **Set the admin.** Add `ADMIN_EMAILS` with your email (comma-separate for more). Admins set up families on the Families page.
 5. **Add the Claude API key.** Create a key at console.anthropic.com and set `ANTHROPIC_API_KEY`. Optional: `ANTHROPIC_MODEL` to change the model (defaults to `claude-sonnet-5-5`).
 6. **Create the tables.** On your machine (safe to re-run any time):
    ```bash
@@ -44,6 +44,19 @@ npm install
 DATABASE_URL="<your Neon connection string>" npm run db:push
 npm run dev
 ```
+
+## Families
+
+Quiz Desk supports several families. Each family only sees its own quizzes, spelling lists and results.
+
+- **Site admin** (emails in `ADMIN_EMAILS`, or `PARENT_EMAILS` on older setups) gets a **Families** tab: create families, set each family's monthly limit, and add people by email as a parent or child. Adding an email sends a Clerk invitation, or links the account right away if that person has already signed up. You can also change roles, move someone to another family, or remove them.
+- **Parents** see the Parent dashboard for their own family only. **Children** see what's assigned to them.
+- One family per person. Someone signed in but not in a family sees a "not set up yet" page.
+- **Monthly limit:** new quizzes, next rounds and spelling lists count against it (those use the Claude API). Blank = no limit. Resets on the 1st (Eastern time). Parents see how many are left on their dashboard.
+
+**Upgrading from one family:** after `npm run db:push`, the first sign-in moves every existing account into one family named `FIRST_FAMILY_NAME` (default "My family", rename it on the Families page). People in `PARENT_EMAILS`/`ADMIN_EMAILS` become its parents and everyone else its children, and all existing quizzes, spelling lists and results go with it. That family starts with no limit.
+
+Keep Clerk on **Invite-only** so only people you add can sign up.
 
 ## Study notes and next rounds
 

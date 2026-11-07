@@ -232,3 +232,6 @@ td a { color: var(--ink); font-weight: 600; }
 @keyframes rise { from { transform: translateY(10px); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes pulse { 50% { transform: scale(1.08); } }
 @media (prefers-reduced-motion: reduce) { .shake, .slots.win, .ltile.glow, .stars span.on, .cheer span, .slot.filled, .streak { animation: none !important; } }
+
+/* admin */
+td select { border: 1px solid var(--rule); background: var(--paper); border-radius: 7px; padding: 5px 8px; font-size: 14px; }

@@ -8,11 +8,11 @@ import { RUSH_MS, fmtDur, fmtSec, fmtWhen, metrics } from "@/lib/metrics";
 export const dynamic = "force-dynamic";
 
 export default async function AttemptDetail({ params }: { params: Promise<{ id: string }> }) {
-  await requireParent();
+  const viewer = await requireParent();
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const [a] = await db.select().from(attempts).where(eq(attempts.id, id));
-  if (!a) notFound();
+  if (!a || a.ownerFamilyId !== viewer.familyId) notFound();
   const rows = await db.select({ ans: attemptAnswers, q: questions }).from(attemptAnswers)
     .leftJoin(questions, eq(questions.id, attemptAnswers.questionId))
     .where(eq(attemptAnswers.attemptId, id)).orderBy(asc(attemptAnswers.position));

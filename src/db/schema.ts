@@ -3,8 +3,36 @@ import {
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
+export const families = pgTable("families", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  // new quizzes + next rounds + spelling lists allowed per calendar month; null = no limit
+  monthlyLimit: integer("monthly_limit").default(20),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** One row per person. Added by email; user_id fills in the first time they sign in. One family per person. */
+export const familyMembers = pgTable("family_members", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  familyId: uuid("family_id").notNull().references(() => families.id, { onDelete: "cascade" }),
+  email: text("email").notNull().unique(),
+  userId: text("user_id").unique(),
+  role: text("role", { enum: ["parent", "child"] }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("family_members_family_idx").on(t.familyId)]);
+
+/** Every Claude call that counts toward a family's monthly limit. */
+export const generations = pgTable("generations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  familyId: uuid("family_id").notNull().references(() => families.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull(),
+  kind: text("kind", { enum: ["quiz", "round", "spelling"] }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("generations_family_idx").on(t.familyId, t.createdAt)]);
+
 export const quizzes = pgTable("quizzes", {
   id: uuid("id").primaryKey().defaultRandom(),
+  ownerFamilyId: uuid("owner_family_id").references(() => families.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
   subject: text("subject").notNull().default(""),
   createdBy: text("created_by").notNull(),
@@ -31,6 +59,7 @@ export const questions = pgTable("questions", {
 
 export const attempts = pgTable("attempts", {
   id: uuid("id").primaryKey().defaultRandom(),
+  ownerFamilyId: uuid("owner_family_id").references(() => families.id, { onDelete: "cascade" }),
   // kept when a quiz is deleted so results and time stats survive
   quizId: uuid("quiz_id").references(() => quizzes.id, { onDelete: "set null" }),
   quizTitle: text("quiz_title").notNull(),
@@ -60,6 +89,8 @@ export const attemptAnswers = pgTable("attempt_answers", {
   correct: boolean("correct"),
 }, (t) => [primaryKey({ columns: [t.attemptId, t.position] })]);
 
+export type Family = typeof families.$inferSelect;
+export type FamilyMember = typeof familyMembers.$inferSelect;
 export type Quiz = typeof quizzes.$inferSelect;
 export type Question = typeof questions.$inferSelect;
 export type Attempt = typeof attempts.$inferSelect;
@@ -69,6 +100,7 @@ export type AttemptAnswer = typeof attemptAnswers.$inferSelect;
 
 export const spellingLists = pgTable("spelling_lists", {
   id: uuid("id").primaryKey().defaultRandom(),
+  ownerFamilyId: uuid("owner_family_id").references(() => families.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
   createdBy: text("created_by").notNull(),
   archived: boolean("archived").notNull().default(false),
@@ -89,6 +121,7 @@ export const spellingWords = pgTable("spelling_words", {
 
 export const spellingSessions = pgTable("spelling_sessions", {
   id: uuid("id").primaryKey().defaultRandom(),
+  ownerFamilyId: uuid("owner_family_id").references(() => families.id, { onDelete: "cascade" }),
   listId: uuid("list_id").references(() => spellingLists.id, { onDelete: "set null" }),
   listTitle: text("list_title").notNull(),
   studentId: text("student_id").notNull(),

@@ -14,6 +14,26 @@ if (!url) {
 
 // Keep in step with src/db/schema.ts. Every statement must be safe to re-run.
 const steps = [
+  ["families table", `CREATE TABLE IF NOT EXISTS "families" (
+    "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+    "name" text NOT NULL,
+    "monthly_limit" integer DEFAULT 20,
+    "created_at" timestamp with time zone DEFAULT now() NOT NULL)`],
+  ["family_members table", `CREATE TABLE IF NOT EXISTS "family_members" (
+    "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+    "family_id" uuid NOT NULL REFERENCES "families"("id") ON DELETE cascade,
+    "email" text NOT NULL UNIQUE,
+    "user_id" text UNIQUE,
+    "role" text NOT NULL,
+    "created_at" timestamp with time zone DEFAULT now() NOT NULL)`],
+  ["generations table", `CREATE TABLE IF NOT EXISTS "generations" (
+    "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+    "family_id" uuid NOT NULL REFERENCES "families"("id") ON DELETE cascade,
+    "user_id" text NOT NULL,
+    "kind" text NOT NULL,
+    "created_at" timestamp with time zone DEFAULT now() NOT NULL)`],
+  ["family_members_family_idx", `CREATE INDEX IF NOT EXISTS "family_members_family_idx" ON "family_members" USING btree ("family_id")`],
+  ["generations_family_idx", `CREATE INDEX IF NOT EXISTS "generations_family_idx" ON "generations" USING btree ("family_id","created_at")`],
   ["quizzes table", `CREATE TABLE IF NOT EXISTS "quizzes" (
     "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
     "title" text NOT NULL,
@@ -114,6 +134,14 @@ const steps = [
   ["spelling_words_list_idx", `CREATE INDEX IF NOT EXISTS "spelling_words_list_idx" ON "spelling_words" USING btree ("list_id")`],
   ["spelling_sessions_student_idx", `CREATE INDEX IF NOT EXISTS "spelling_sessions_student_idx" ON "spelling_sessions" USING btree ("student_id")`],
   ["spelling_sessions_list_idx", `CREATE INDEX IF NOT EXISTS "spelling_sessions_list_idx" ON "spelling_sessions" USING btree ("list_id")`],
+  ["quizzes.owner_family_id column", `ALTER TABLE "quizzes" ADD COLUMN IF NOT EXISTS "owner_family_id" uuid REFERENCES "families"("id") ON DELETE cascade`],
+  ["quizzes_family_idx", `CREATE INDEX IF NOT EXISTS "quizzes_family_idx" ON "quizzes" USING btree ("owner_family_id")`],
+  ["attempts.owner_family_id column", `ALTER TABLE "attempts" ADD COLUMN IF NOT EXISTS "owner_family_id" uuid REFERENCES "families"("id") ON DELETE cascade`],
+  ["attempts_family_idx", `CREATE INDEX IF NOT EXISTS "attempts_family_idx" ON "attempts" USING btree ("owner_family_id")`],
+  ["spelling_lists.owner_family_id column", `ALTER TABLE "spelling_lists" ADD COLUMN IF NOT EXISTS "owner_family_id" uuid REFERENCES "families"("id") ON DELETE cascade`],
+  ["spelling_lists_family_idx", `CREATE INDEX IF NOT EXISTS "spelling_lists_family_idx" ON "spelling_lists" USING btree ("owner_family_id")`],
+  ["spelling_sessions.owner_family_id column", `ALTER TABLE "spelling_sessions" ADD COLUMN IF NOT EXISTS "owner_family_id" uuid REFERENCES "families"("id") ON DELETE cascade`],
+  ["spelling_sessions_family_idx", `CREATE INDEX IF NOT EXISTS "spelling_sessions_family_idx" ON "spelling_sessions" USING btree ("owner_family_id")`],
   ["attempts_student_idx", `CREATE INDEX IF NOT EXISTS "attempts_student_idx" ON "attempts" USING btree ("student_id")`],
   ["attempts_started_idx", `CREATE INDEX IF NOT EXISTS "attempts_started_idx" ON "attempts" USING btree ("started_at")`],
   ["questions_quiz_idx", `CREATE INDEX IF NOT EXISTS "questions_quiz_idx" ON "questions" USING btree ("quiz_id")`],

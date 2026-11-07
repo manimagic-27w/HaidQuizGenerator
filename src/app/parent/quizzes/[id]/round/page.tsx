@@ -7,14 +7,14 @@ import NextRound, { type FocusOption } from "./NextRound";
 export const dynamic = "force-dynamic";
 
 export default async function NextRoundPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireParent();
+  const viewer = await requireParent();
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
-  const f = await loadFamily(id);
+  const f = await loadFamily(id, viewer.familyId);
   if (!f) notFound();
 
   const ids = f.members.map((m) => m.id);
-  const [students, takers] = await Promise.all([listStudents(), familyTakers(ids)]);
+  const [students, takers] = await Promise.all([listStudents(viewer.familyId), familyTakers(ids)]);
   const { notes, fromQuestions } = familyNotes(f);
   const { round, title } = nextRound(f);
 

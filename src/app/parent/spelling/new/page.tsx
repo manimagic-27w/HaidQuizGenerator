@@ -3,8 +3,8 @@ import { listStudents, requireParent } from "@/lib/auth";
 import SpellingImport from "./SpellingImport";
 
 export default async function NewSpellingPage() {
-  await requireParent();
-  const students = await listStudents();
+  const viewer = await requireParent();
+  const students = await listStudents(viewer.familyId);
   return (
     <>
       <section className="stack">

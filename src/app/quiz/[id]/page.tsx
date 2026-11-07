@@ -11,7 +11,7 @@ export default async function QuizPage({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const [quiz] = await db.select().from(quizzes).where(eq(quizzes.id, id));
-  if (!quiz || (!viewer.isParent && (quiz.archived || !canSee(quiz.assignedTo, viewer.id)))) notFound();
+  if (!quiz || quiz.ownerFamilyId !== viewer.familyId || (!viewer.isParent && (quiz.archived || !canSee(quiz.assignedTo, viewer.id)))) notFound();
   const qs = await db.select().from(questions).where(eq(questions.quizId, id)).orderBy(asc(questions.position));
   if (!qs.length) notFound();
 
@@ -34,7 +34,7 @@ export default async function QuizPage({ params }: { params: Promise<{ id: strin
     for (const r of rows) if (answers[r.position]) answers[r.position] = { choice: r.choice, firstChoice: r.firstChoice, changes: r.changes, ms: r.ms, visits: r.visits };
   } else {
     [attempt] = await db.insert(attempts).values({
-      quizId: id, quizTitle: quiz.title, studentId: viewer.id, studentName: viewer.name, total: qs.length,
+      ownerFamilyId: viewer.familyId, quizId: id, quizTitle: quiz.title, studentId: viewer.id, studentName: viewer.name, total: qs.length,
     }).returning();
     await db.insert(attemptAnswers).values(qs.map((q, i) => ({ attemptId: attempt.id, position: i, questionId: q.id })));
     answers = blank();

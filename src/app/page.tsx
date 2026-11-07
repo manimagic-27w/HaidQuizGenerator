@@ -12,12 +12,12 @@ export default async function Home() {
   const all = await db
     .select({ id: quizzes.id, title: quizzes.title, subject: quizzes.subject, createdAt: quizzes.createdAt, assignedTo: quizzes.assignedTo, count: sql<number>`count(${questions.id})::int` })
     .from(quizzes).leftJoin(questions, eq(questions.quizId, quizzes.id))
-    .where(eq(quizzes.archived, false)).groupBy(quizzes.id).orderBy(desc(quizzes.createdAt));
+    .where(and(eq(quizzes.ownerFamilyId, viewer.familyId), eq(quizzes.archived, false))).groupBy(quizzes.id).orderBy(desc(quizzes.createdAt));
   const list = viewer.isParent ? all : all.filter((q) => canSee(q.assignedTo, viewer.id));
   const allSpelling = await db
     .select({ id: spellingLists.id, title: spellingLists.title, assignedTo: spellingLists.assignedTo, createdAt: spellingLists.createdAt, count: sql<number>`count(${spellingWords.id})::int` })
     .from(spellingLists).leftJoin(spellingWords, eq(spellingWords.listId, spellingLists.id))
-    .where(eq(spellingLists.archived, false)).groupBy(spellingLists.id).orderBy(desc(spellingLists.createdAt));
+    .where(and(eq(spellingLists.ownerFamilyId, viewer.familyId), eq(spellingLists.archived, false))).groupBy(spellingLists.id).orderBy(desc(spellingLists.createdAt));
   const spelling = viewer.isParent ? allSpelling : allSpelling.filter((l) => canSee(l.assignedTo, viewer.id));
   const spellProg = viewer.isParent ? new Map() : await wordProgress(spelling.map((l) => l.id), viewer.id);
   const mine = viewer.isParent ? [] : await db.select({

@@ -27,10 +27,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <Link href="/" className="brand"><b>Quiz <span>Desk</span></b></Link>
               <SignedIn>
                 <div className="row">
-                  {viewer?.isParent && (
+                  {(viewer?.isParent || viewer?.isAdmin) && (
                     <nav className="tabs">
-                      <Link href="/">Quizzes</Link>
-                      <Link href="/parent">Parent</Link>
+                      {viewer.familyId && <Link href="/">Quizzes</Link>}
+                      {viewer.isParent && <Link href="/parent">Parent</Link>}
+                      {viewer.isAdmin && <Link href="/admin">Families</Link>}
                     </nav>
                   )}
                   <UserButton />

@@ -3,13 +3,13 @@ import { db, quizzes, questions, attempts, attemptAnswers, type Quiz } from "@/d
 import type { Miss } from "@/lib/generate";
 import { LETTERS } from "@/lib/metrics";
 
-/** Every quiz made from the same study guide: the first one plus every later round. */
-export async function loadFamily(quizId: string) {
-  const [quiz] = await db.select().from(quizzes).where(eq(quizzes.id, quizId));
+/** Every quiz made from the same study guide: the first one plus every later round. Only within the owner's family. */
+export async function loadFamily(quizId: string, ownerFamilyId: string) {
+  const [quiz] = await db.select().from(quizzes).where(and(eq(quizzes.id, quizId), eq(quizzes.ownerFamilyId, ownerFamilyId)));
   if (!quiz) return null;
   const familyKey = quiz.familyId ?? quiz.id;
   const members = await db.select().from(quizzes)
-    .where(or(eq(quizzes.id, familyKey), eq(quizzes.familyId, familyKey)))
+    .where(and(eq(quizzes.ownerFamilyId, ownerFamilyId), or(eq(quizzes.id, familyKey), eq(quizzes.familyId, familyKey))))
     .orderBy(asc(quizzes.createdAt));
   const ids = members.map((m) => m.id);
   const qs = ids.length ? await db.select().from(questions).where(inArray(questions.quizId, ids)) : [];

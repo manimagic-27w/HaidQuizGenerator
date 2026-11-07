@@ -4,20 +4,23 @@ import { db, attempts, attemptAnswers, quizzes, questions, spellingLists, spelli
 import { listStudents, requireParent } from "@/lib/auth";
 import { IDLE_MS, fmtDur, fmtSec, fmtWhen, metrics } from "@/lib/metrics";
 import QuizManager from "./QuizManager";
+import { allowance } from "@/lib/usage";
 import SpellingManager from "./SpellingManager";
 import { summarize, wordProgress } from "@/lib/spellingProgress";
 
 export const dynamic = "force-dynamic";
 
 export default async function ParentPage() {
-  await requireParent();
-  const students = await listStudents();
-  const list = await db.select().from(attempts).orderBy(desc(attempts.startedAt)).limit(300);
+  const viewer = await requireParent();
+  const fam = viewer.familyId;
+  const students = await listStudents(fam);
+  const allow = await allowance(fam);
+  const list = await db.select().from(attempts).where(eq(attempts.ownerFamilyId, fam)).orderBy(desc(attempts.startedAt)).limit(300);
   const ans = list.length ? await db.select().from(attemptAnswers).where(inArray(attemptAnswers.attemptId, list.map((a) => a.id))) : [];
   const rows = list.map((a) => ({ a, m: metrics({ ...a, answers: ans.filter((x) => x.attemptId === a.id) }) }));
   const quizList = await db
     .select({ id: quizzes.id, title: quizzes.title, archived: quizzes.archived, assignedTo: quizzes.assignedTo, count: sql<number>`count(distinct ${questions.id})::int` })
-    .from(quizzes).leftJoin(questions, eq(questions.quizId, quizzes.id)).groupBy(quizzes.id).orderBy(desc(quizzes.createdAt));
+    .from(quizzes).leftJoin(questions, eq(questions.quizId, quizzes.id)).where(eq(quizzes.ownerFamilyId, fam)).groupBy(quizzes.id).orderBy(desc(quizzes.createdAt));
   const finishedByQuiz = Object.fromEntries(quizList.map((q) => [q.id, list.filter((a) => a.quizId === q.id && a.status === "done").length]));
 
   const cutoff = Date.now() - 30 * 864e5;
@@ -38,6 +41,7 @@ export default async function ParentPage() {
   const sLists = await db
     .select({ id: spellingLists.id, title: spellingLists.title, archived: spellingLists.archived, assignedTo: spellingLists.assignedTo, count: sql<number>`count(${spellingWords.id})::int` })
     .from(spellingLists).leftJoin(spellingWords, eq(spellingWords.listId, spellingLists.id))
+    .where(eq(spellingLists.ownerFamilyId, fam))
     .groupBy(spellingLists.id).orderBy(desc(spellingLists.createdAt));
   const players = sLists.length ? await db.selectDistinct({ id: spellingSessions.studentId, name: spellingSessions.studentName })
     .from(spellingSessions).where(inArray(spellingSessions.listId, sLists.map((l) => l.id))) : [];
@@ -55,6 +59,11 @@ export default async function ParentPage() {
         <div className="stack" style={{ gap: 6 }}>
           <h1>Parent view</h1>
           <p className="muted">How the study time is being spent.</p>
+          {allow.limit != null && (
+            <p className="small muted">
+              <b className="mono">{allow.left}</b> of {allow.limit} quiz and spelling-list creations left this month · resets on the 1st
+            </p>
+          )}
         </div>
         <div className="row">
           <Link className="btn primary" href="/parent/new">New quiz from study guide</Link>

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getViewer } from "@/lib/auth";
+import { apiParent } from "@/lib/auth";
+import { limitReached, recordGeneration } from "@/lib/usage";
 import { apiErrorMessage, generateRound, StudyGuideError, type Draft } from "@/lib/generate";
 import { familyMisses, familyNotes, loadFamily, nextRound } from "@/lib/rounds";
 
@@ -18,13 +19,15 @@ type Ctx = { params: Promise<{ id: string }> };
 
 /** Write the next round of a quiz from its saved study notes, aimed at what the student missed. */
 export async function POST(req: Request, { params }: Ctx) {
-  const viewer = await getViewer();
-  if (!viewer?.isParent) return NextResponse.json({ error: "Only a parent can make quizzes." }, { status: 403 });
+  const viewer = await apiParent();
+  if (!viewer) return NextResponse.json({ error: "Only a parent can make quizzes." }, { status: 403 });
   const { id } = await params;
+  const blocked = await limitReached(viewer.familyId);
+  if (blocked) return NextResponse.json({ error: blocked }, { status: 429 });
   const body = bodySchema.safeParse(await req.json().catch(() => ({})));
   if (!body.success) return NextResponse.json({ error: "Bad request." }, { status: 400 });
 
-  const f = await loadFamily(id);
+  const f = await loadFamily(id, viewer.familyId);
   if (!f) return NextResponse.json({ error: "That quiz no longer exists." }, { status: 404 });
   const saved = familyNotes(f);
   const notes = body.data.notes?.trim() || saved.notes;
@@ -39,6 +42,7 @@ export async function POST(req: Request, { params }: Ctx) {
       notes, title: f.members[0].title, subject: f.quiz.subject, misses,
       previous: f.questions.map((q) => q.prompt), focus: body.data.focus, reviewShare: body.data.reviewShare,
     });
+    await recordGeneration(viewer.familyId, viewer.id, "round");
     const draft: Draft = { title, subject: out.subject, studyNotes: notes, sourceQuizId: f.quiz.id, questions: out.questions };
     return NextResponse.json({ draft, focusedOn: misses.length });
   } catch (e) {

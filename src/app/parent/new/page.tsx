@@ -3,8 +3,8 @@ import { listStudents, requireParent } from "@/lib/auth";
 import NewQuiz from "./NewQuiz";
 
 export default async function NewQuizPage() {
-  await requireParent();
-  const students = await listStudents();
+  const viewer = await requireParent();
+  const students = await listStudents(viewer.familyId);
   return (
     <>
       <section className="stack">

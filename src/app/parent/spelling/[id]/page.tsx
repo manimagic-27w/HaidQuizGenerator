@@ -12,15 +12,15 @@ export const dynamic = "force-dynamic";
 const STATUS = { mastered: ["Mastered", "good"], learning: ["Practicing", "warn"], new: ["Not tried", "info"] } as const;
 
 export default async function SpellingProgress({ params }: { params: Promise<{ id: string }> }) {
-  await requireParent();
+  const viewer = await requireParent();
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const [list] = await db.select().from(spellingLists).where(eq(spellingLists.id, id));
-  if (!list) notFound();
+  if (!list || list.ownerFamilyId !== viewer.familyId) notFound();
 
   const sessions = await db.select().from(spellingSessions).where(eq(spellingSessions.listId, id)).orderBy(desc(spellingSessions.startedAt)).limit(100);
   const results = sessions.length ? await db.select().from(spellingResults).where(inArray(spellingResults.sessionId, sessions.map((s) => s.id))) : [];
-  const students = await listStudents();
+  const students = await listStudents(viewer.familyId);
   const takerIds = [...new Set(sessions.map((s) => s.studentId))];
   const shown = takerIds.length ? takerIds : list.assignedTo;
   const progress = await Promise.all(shown.map(async (sid) => ({ sid, words: (await wordProgress([id], sid)).get(id) || [] })));

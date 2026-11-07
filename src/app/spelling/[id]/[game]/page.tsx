@@ -12,7 +12,7 @@ export default async function SpellingGame({ params }: { params: Promise<{ id: s
   const { id, game } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id) || !(game in GAMES)) notFound();
   const [list] = await db.select().from(spellingLists).where(eq(spellingLists.id, id));
-  if (!list || (!viewer.isParent && (list.archived || !canSee(list.assignedTo, viewer.id)))) notFound();
+  if (!list || list.ownerFamilyId !== viewer.familyId || (!viewer.isParent && (list.archived || !canSee(list.assignedTo, viewer.id)))) notFound();
   const words = await db.select().from(spellingWords).where(eq(spellingWords.listId, id)).orderBy(asc(spellingWords.position));
   if (!words.length) notFound();
 
@@ -25,7 +25,7 @@ export default async function SpellingGame({ params }: { params: Promise<{ id: s
       notExists(db.select().from(spellingResults).where(eq(spellingResults.sessionId, spellingSessions.id))),
     ));
     const [s] = await db.insert(spellingSessions).values({
-      listId: id, listTitle: list.title, studentId: viewer.id, studentName: viewer.name, game: game as Game, total: words.length,
+      ownerFamilyId: viewer.familyId, listId: id, listTitle: list.title, studentId: viewer.id, studentName: viewer.name, game: game as Game, total: words.length,
     }).returning({ id: spellingSessions.id });
     sessionId = s.id;
   }

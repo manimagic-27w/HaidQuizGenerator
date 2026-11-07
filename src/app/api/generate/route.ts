@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getViewer } from "@/lib/auth";
+import { apiParent } from "@/lib/auth";
+import { limitReached, recordGeneration } from "@/lib/usage";
 import { apiErrorMessage, generateQuiz, StudyGuideError, type StudyFile } from "@/lib/generate";
 
 export const runtime = "nodejs";
@@ -9,11 +10,14 @@ const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const MAX_BYTES = 4_300_000; // Vercel caps request bodies at 4.5 MB
 
 export async function POST(req: Request) {
-  const viewer = await getViewer();
-  if (!viewer?.isParent) return NextResponse.json({ error: "Only a parent can make quizzes." }, { status: 403 });
+  const viewer = await apiParent();
+  if (!viewer) return NextResponse.json({ error: "Only a parent can make quizzes." }, { status: 403 });
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ error: "ANTHROPIC_API_KEY isn't set in the Vercel environment variables." }, { status: 500 });
   }
+
+  const blocked = await limitReached(viewer.familyId);
+  if (blocked) return NextResponse.json({ error: blocked }, { status: 429 });
 
   const form = await req.formData();
   const focus = String(form.get("focus") || "").slice(0, 400);
@@ -34,6 +38,7 @@ export async function POST(req: Request) {
 
   try {
     const draft = await generateQuiz(files, focus);
+    await recordGeneration(viewer.familyId, viewer.id, "quiz");
     return NextResponse.json({ draft });
   } catch (e) {
     if (e instanceof StudyGuideError) return NextResponse.json({ error: e.message }, { status: 422 });
