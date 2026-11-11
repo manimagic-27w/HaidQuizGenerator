@@ -71,7 +71,7 @@ export default async function ParentPage() {
       <section className="spread">
         <div className="stack" style={{ gap: 6 }}>
           <h1>Parent view</h1>
-          <p className="muted">How the study time is being spent.</p>
+          <p className="muted">How the study time is being spent. New here? Read the <Link href="/guide">parent quick start</Link>.</p>
           {allow.limit != null && (
             <p className="small muted">
               <b className="mono">{allow.left}</b> of {allow.limit} quiz and spelling-list creations left this month · resets on the 1st

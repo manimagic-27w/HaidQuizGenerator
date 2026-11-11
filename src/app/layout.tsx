@@ -31,6 +31,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                     <nav className="tabs">
                       {viewer.familyId && <Link href="/">Quizzes</Link>}
                       {viewer.isParent && <Link href="/parent">Parent</Link>}
+                      {viewer.isParent && <Link href="/guide">Guide</Link>}
                       {viewer.isAdmin && <Link href="/admin">Families</Link>}
                     </nav>
                   )}

@@ -235,3 +235,22 @@ td a { color: var(--ink); font-weight: 600; }
 
 /* admin */
 td select { border: 1px solid var(--rule); background: var(--paper); border-radius: 7px; padding: 5px 8px; font-size: 14px; }
+
+/* parent guide */
+.guide { display: flex; flex-direction: column; gap: 30px; max-width: 68ch; }
+.guide .lede { font-size: 18px; color: var(--muted); text-wrap: pretty; }
+.guide section { display: flex; flex-direction: column; gap: 12px; scroll-margin-top: 16px; }
+.guide h2 { display: flex; align-items: center; gap: 12px; }
+.guide .step { flex: none; width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; background: var(--hi); color: var(--hi-ink); font: 600 15px var(--f-mono), monospace; }
+.guide ol, .guide ul { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 8px; }
+.guide li { padding-left: 4px; }
+.guide .note { background: var(--card); border: 1px solid var(--rule); border-radius: 10px; padding: 12px 14px; font-size: 15px; }
+.guide .toc { background: var(--card); border: 1px solid var(--rule); border-radius: 12px; padding: 14px 18px; }
+.guide .toc ol { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 6px 20px; }
+.guide .terms { margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.guide .terms div { display: flex; flex-direction: column; gap: 2px; }
+.guide dt { font-weight: 700; }
+.guide dd { margin: 0; color: var(--muted); }
+.guide .effort { display: flex; flex-direction: column; gap: 8px; }
+.guide .effort div { display: grid; grid-template-columns: 110px 1fr; gap: 12px; align-items: baseline; }
+.guide footer { padding-top: 8px; }
