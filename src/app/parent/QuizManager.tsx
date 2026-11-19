@@ -6,7 +6,7 @@ import Link from "next/link";
 import type { Student } from "@/lib/auth";
 import AssignPicker, { assigneeLabel } from "@/components/AssignPicker";
 
-type Q = { id: string; title: string; archived: boolean; assignedTo: string[]; count: number; finished: number };
+type Q = { id: string; title: string; archived: boolean; assignedTo: string[]; count: number; finished: number; madeBy: string | null };
 
 export default function QuizManager({ quizzes, students }: { quizzes: Q[]; students: Student[] }) {
   const router = useRouter();
@@ -30,7 +30,7 @@ export default function QuizManager({ quizzes, students }: { quizzes: Q[]; stude
         {quizzes.map((q) => (
           <div className="mq" key={q.id}>
             <div style={{ minWidth: 0, flex: "1 1 260px" }}>
-              <b>{q.title}</b> {q.archived && <span className="pill warn">Hidden</span>}
+              <b>{q.title}</b> {q.madeBy && <span className="pill hi">Practice by {q.madeBy}</span>} {q.archived && <span className="pill warn">Hidden</span>}
               <div className="small muted">{q.count} questions · {q.finished} finished {q.finished === 1 ? "attempt" : "attempts"}</div>
               <div className="who">For: <b>{assigneeLabel(q.assignedTo, students)}</b></div>
             </div>

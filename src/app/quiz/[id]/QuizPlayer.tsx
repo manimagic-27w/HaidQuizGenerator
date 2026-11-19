@@ -5,7 +5,13 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { IDLE_MS, LETTERS, fmtClock, fmtDur, fmtSec } from "@/lib/metrics";
 
-export type PlayerAnswer = { choice: number | null; firstChoice: number | null; changes: number; ms: number; visits: number };
+export type Feedback = { correct: boolean; answer: number; explanation: string };
+export type PlayerAnswer = {
+  choice: number | null; firstChoice: number | null; changes: number;
+  /** time to answer (until checked) */ ms: number;
+  /** time reading feedback after checking */ reviewMs: number;
+  visits: number; feedback: Feedback | null;
+};
 type Props = {
   quiz: { title: string; subject: string };
   questions: { prompt: string; choices: string[] }[];
@@ -40,12 +46,14 @@ export default function QuizPlayer({ quiz, questions, attempt, preview }: Props)
     const idleFrom = s.lastInput + IDLE_MS;
     let active = now - s.segStart, idle = 0;
     if (idleFrom < now) { active = Math.max(0, idleFrom - s.segStart); idle = now - Math.max(s.segStart, idleFrom); }
-    s.answers[s.cur].ms += active; s.idleMs += idle; s.segStart = now;
+    const a = s.answers[s.cur];
+    if (a.feedback) a.reviewMs += active; else a.ms += active;
+    s.idleMs += idle; s.segStart = now;
   }, []);
 
   const payload = () => {
     const s = t.current;
-    return { answers: s.answers.map((a, position) => ({ position, ...a, ms: Math.round(a.ms) })), awayMs: Math.round(s.awayMs), awayCount: s.awayCount, idleMs: Math.round(s.idleMs) };
+    return { answers: s.answers.map(({ feedback: _f, ...a }, position) => ({ position, ...a, ms: Math.round(a.ms), reviewMs: Math.round(a.reviewMs) })), awayMs: Math.round(s.awayMs), awayCount: s.awayCount, idleMs: Math.round(s.idleMs) };
   };
 
   const saving = useRef<Promise<void> | null>(null);
@@ -107,13 +115,44 @@ export default function QuizPlayer({ quiz, questions, attempt, preview }: Props)
     setCur(s.cur); setReviewing(false); setConfirmExit(false);
     save();
   };
+  const [checking, setChecking] = useState(false);
   const choose = (i: number) => {
     const a = t.current.answers[t.current.cur];
-    if (a.choice === i) return;
+    if (a.feedback || a.choice === i) return;
     flush();
     if (a.choice == null) a.firstChoice = i; else a.changes++;
     a.choice = i;
     setTick((x) => x + 1);
+  };
+  /** Lock the current answer and show whether it was right, with the correct answer and why. */
+  const check = async () => {
+    const s = t.current, pos = s.cur, a = s.answers[pos];
+    if (a.choice == null || a.feedback || checking) return;
+    flush();
+    if (preview) {
+      const k = preview.key[pos];
+      a.feedback = { correct: a.choice === k.answer, answer: k.answer, explanation: k.explanation };
+      setTick((x) => x + 1);
+      return;
+    }
+    setChecking(true);
+    try {
+      await saving.current;
+      const res = await fetch(`/api/attempts/${attempt.id}/check`, {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ position: pos, choice: a.choice, firstChoice: a.firstChoice, changes: a.changes }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Couldn't check that answer");
+      flush(); // time spent waiting still counts as answering
+      a.feedback = data as Feedback;
+      setSaveErr("");
+      save();
+    } catch (e) {
+      setSaveErr(`${(e as Error).message}. Try Check again.`);
+    } finally {
+      setChecking(false);
+    }
   };
   const toReview = () => { flush(); t.current.paused = true; setReviewing(true); save(); };
 
@@ -134,6 +173,11 @@ export default function QuizPlayer({ quiz, questions, attempt, preview }: Props)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (reviewing || previewResult || (e.target as HTMLElement)?.closest?.("input,textarea")) return;
+      if (e.key === "Enter") {
+        const a = t.current.answers[t.current.cur];
+        if (a.choice != null && !a.feedback) { check(); return; }
+        if (a.feedback) { if (t.current.cur < n - 1) goTo(t.current.cur + 1); else toReview(); return; }
+      }
       const k = e.key.toLowerCase();
       const idx = "1234".includes(k) ? "1234".indexOf(k) : "abcd".indexOf(k);
       if (k.length === 1 && idx >= 0 && idx < questions[t.current.cur].choices.length) choose(idx);
@@ -197,7 +241,7 @@ export default function QuizPlayer({ quiz, questions, attempt, preview }: Props)
           <p>You answered <b>{done} of {n}</b> questions.{" "}
             {missing.length ? <>Still blank: {missing.map((i) => <button key={i} className="btn sm" style={{ marginRight: 6 }} onClick={() => goTo(i)}>Q{i + 1}</button>)}</> : "Every question has an answer."}
           </p>
-          <p className="muted small">After you submit you&apos;ll see which ones you got right, with an explanation for each.</p>
+          <p className="muted small">Submit to save your score. You&apos;ll see every question again with its answer.</p>
           <div className="navrow">
             <button className="btn" onClick={() => goTo(missing[0] ?? n - 1)}>Back to questions</button>
             <button className="btn primary" disabled={submitting} onClick={submit}>{submitting ? "Submitting…" : "Submit quiz"}</button>
@@ -209,22 +253,34 @@ export default function QuizPlayer({ quiz, questions, attempt, preview }: Props)
             <div><span className="qnum">Q{cur + 1} / {n}</span></div>
             <p className="qtext">{item.prompt}</p>
             <div className="choices">
-              {item.choices.map((c, i) => (
-                <button key={i} className="choice" aria-pressed={ans.choice === i} onClick={() => choose(i)}>
-                  <span className="k">{LETTERS[i]}</span><span>{c}</span>
-                </button>
-              ))}
+              {item.choices.map((c, i) => {
+                const fb = ans.feedback;
+                const state = !fb ? "" : i === fb.answer ? "right" : i === ans.choice ? "wrong" : "dim";
+                return (
+                  <button key={i} className={`choice ${state}`} aria-pressed={ans.choice === i} disabled={!!fb || checking} onClick={() => choose(i)}>
+                    <span className="k">{LETTERS[i]}</span><span>{c}</span>
+                  </button>
+                );
+              })}
             </div>
+            {ans.feedback && (
+              <div className={`fb ${ans.feedback.correct ? "ok" : "no"}`} role="status">
+                <b>{ans.feedback.correct ? "Correct!" : `Not quite. The answer is ${LETTERS[ans.feedback.answer]}: ${item.choices[ans.feedback.answer]}`}</b>
+                {ans.feedback.explanation && <p>{ans.feedback.explanation}</p>}
+              </div>
+            )}
             <div className="navrow">
-              <button className="btn" disabled={cur === 0} onClick={() => goTo(cur - 1)}>Back</button>
-              {cur === n - 1
-                ? <button className="btn primary" onClick={toReview}>Review &amp; submit</button>
-                : <button className="btn primary" onClick={() => goTo(cur + 1)}>{ans.choice == null ? "Skip for now" : "Next"}</button>}
+              <button className="btn" disabled={cur === 0 || checking} onClick={() => goTo(cur - 1)}>Back</button>
+              {ans.choice != null && !ans.feedback
+                ? <button className="btn primary" disabled={checking} onClick={check}>{checking ? "Checking…" : "Check answer"}</button>
+                : cur === n - 1
+                  ? <button className="btn primary" onClick={toReview}>Review &amp; submit</button>
+                  : <button className="btn primary" onClick={() => goTo(cur + 1)}>{ans.choice == null ? "Skip for now" : "Next"}</button>}
             </div>
           </section>
           <div className="dots" aria-label="Jump to question">
             {s.answers.map((a, i) => (
-              <button key={i} className={`dot ${a.choice != null ? "done" : ""} ${i === cur ? "cur" : ""}`} onClick={() => goTo(i)} aria-label={`Question ${i + 1}`}>{i + 1}</button>
+              <button key={i} className={`dot ${a.feedback ? (a.feedback.correct ? "ok" : "no") : a.choice != null ? "done" : ""} ${i === cur ? "cur" : ""}`} onClick={() => goTo(i)} aria-label={`Question ${i + 1}`}>{i + 1}</button>
             ))}
           </div>
         </>

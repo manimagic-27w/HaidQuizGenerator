@@ -254,3 +254,23 @@ td select { border: 1px solid var(--rule); background: var(--paper); border-radi
 .guide .effort { display: flex; flex-direction: column; gap: 8px; }
 .guide .effort div { display: grid; grid-template-columns: 110px 1fr; gap: 12px; align-items: baseline; }
 .guide footer { padding-top: 8px; }
+
+/* answer feedback */
+.choice.right { border-color: var(--good); background: var(--good-soft); }
+.choice.right .k { background: var(--good); color: var(--card); border-color: var(--good); }
+.choice.wrong { border-color: var(--bad); background: var(--bad-soft); }
+.choice.wrong .k { background: var(--bad); color: var(--card); border-color: var(--bad); }
+.choice.dim { opacity: .55; }
+.choice:disabled { cursor: default; }
+.choice:disabled:hover { border-color: inherit; }
+.choice.right:disabled:hover { border-color: var(--good); }
+.choice.wrong:disabled:hover { border-color: var(--bad); }
+.fb { border-radius: 11px; padding: 12px 15px; display: flex; flex-direction: column; gap: 4px; border-left: 4px solid; animation: rise .25s ease-out; }
+.fb.ok { background: var(--good-soft); border-color: var(--good); }
+.fb.ok b { color: var(--good); }
+.fb.no { background: var(--bad-soft); border-color: var(--bad); }
+.fb p { font-size: 16px; }
+.dot.ok { background: var(--good-soft); color: var(--good); border-color: transparent; }
+.dot.no { background: var(--bad-soft); color: var(--bad); border-color: transparent; }
+@media (prefers-reduced-motion: reduce) { .fb { animation: none; } }
+.practice { border-color: var(--accent); background: var(--accent-soft); }

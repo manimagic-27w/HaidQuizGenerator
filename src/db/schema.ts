@@ -26,7 +26,7 @@ export const generations = pgTable("generations", {
   id: uuid("id").primaryKey().defaultRandom(),
   familyId: uuid("family_id").notNull().references(() => families.id, { onDelete: "cascade" }),
   userId: text("user_id").notNull(),
-  kind: text("kind", { enum: ["quiz", "round", "spelling"] }).notNull(),
+  kind: text("kind", { enum: ["quiz", "round", "spelling", "practice"] }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index("generations_family_idx").on(t.familyId, t.createdAt)]);
 
@@ -43,6 +43,10 @@ export const quizzes = pgTable("quizzes", {
   studyNotes: text("study_notes").notNull().default(""),
   // the first quiz in a series of rounds from the same study guide (null on that first quiz itself)
   familyId: uuid("family_id"),
+  // the quiz this one was made from (rounds and student practice quizzes)
+  sourceQuizId: uuid("source_quiz_id"),
+  // a practice quiz a student made for themselves; only one per parent-made quiz
+  madeByStudent: boolean("made_by_student").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -85,6 +89,8 @@ export const attemptAnswers = pgTable("attempt_answers", {
   firstChoice: integer("first_choice"),
   changes: integer("changes").notNull().default(0),
   ms: integer("ms").notNull().default(0),
+  // time spent reading the feedback after checking the answer (ms is time to answer)
+  reviewMs: integer("review_ms").notNull().default(0),
   visits: integer("visits").notNull().default(0),
   correct: boolean("correct"),
 }, (t) => [primaryKey({ columns: [t.attemptId, t.position] })]);

@@ -58,6 +58,12 @@ Quiz Desk supports several families. Each family only sees its own quizzes, spel
 
 Keep Clerk on **Invite-only** so only people you add can sign up.
 
+## Answer feedback and practice quizzes
+
+Students pick an answer and tap **Check answer** (or press Enter). The server grades it, locks it, and returns the correct answer and explanation, which shows right away on a miss. The answer key never reaches the browser before an answer is locked. Time reading feedback is saved separately (`attempt_answers.review_ms`): it counts as focused time but not toward per-question pace or rushed answers.
+
+After finishing a quiz a parent made, a child can make **one practice quiz** from it on the results page: 20 new questions from the saved notes, about 60% on their misses across that guide's rounds, assigned only to them. It counts toward the family's monthly limit and can't be used to make another practice quiz.
+
 ## Study notes and next rounds
 
 When a quiz is made from uploaded pages, Claude also writes a detailed outline of the study guide (terms, definitions, facts, steps) and tags every question with a topic. Both are saved with the quiz; you can read and correct the notes on the review screen.

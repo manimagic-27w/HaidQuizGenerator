@@ -15,7 +15,7 @@ export default async function QuizPage({ params }: { params: Promise<{ id: strin
   const qs = await db.select().from(questions).where(eq(questions.quizId, id)).orderBy(asc(questions.position));
   if (!qs.length) notFound();
 
-  const blank = (): PlayerAnswer[] => qs.map(() => ({ choice: null, firstChoice: null, changes: 0, ms: 0, visits: 0 }));
+  const blank = (): PlayerAnswer[] => qs.map(() => ({ choice: null, firstChoice: null, changes: 0, ms: 0, reviewMs: 0, visits: 0, feedback: null }));
 
   // Parents get a preview that grades in the browser and saves nothing.
   if (viewer.isParent) {
@@ -31,7 +31,13 @@ export default async function QuizPage({ params }: { params: Promise<{ id: strin
   if (attempt) {
     await db.update(attempts).set({ sessions: attempt.sessions + 1 }).where(eq(attempts.id, attempt.id));
     const rows = await db.select().from(attemptAnswers).where(eq(attemptAnswers.attemptId, attempt.id));
-    for (const r of rows) if (answers[r.position]) answers[r.position] = { choice: r.choice, firstChoice: r.firstChoice, changes: r.changes, ms: r.ms, visits: r.visits };
+    for (const r of rows) {
+      if (!answers[r.position]) continue;
+      // Answers already checked come back locked, with the feedback she already saw.
+      const q = qs[r.position];
+      const feedback = r.correct != null && q ? { correct: r.correct, answer: q.answerIndex, explanation: q.explanation } : null;
+      answers[r.position] = { choice: r.choice, firstChoice: r.firstChoice, changes: r.changes, ms: r.ms, reviewMs: r.reviewMs, visits: r.visits, feedback };
+    }
   } else {
     [attempt] = await db.insert(attempts).values({
       ownerFamilyId: viewer.familyId, quizId: id, quizTitle: quiz.title, studentId: viewer.id, studentName: viewer.name, total: qs.length,

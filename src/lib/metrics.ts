@@ -5,6 +5,7 @@ export const RUSH_MS = 6_000; // answering faster than this counts as rushed
 export type AnswerStats = {
   choice: number | null;
   ms: number;
+  reviewMs?: number;
   changes: number;
   correct: boolean | null;
 };
@@ -27,12 +28,15 @@ const median = (arr: number[]) => {
 
 export function metrics(a: AttemptStats) {
   const answered = a.answers.filter((x) => x.choice != null);
-  const active = a.answers.reduce((s, x) => s + x.ms, 0);
+  // answering = time to pick an answer; review = time reading feedback afterwards. Both are focused study time.
+  const answering = a.answers.reduce((s, x) => s + x.ms, 0);
+  const review = a.answers.reduce((s, x) => s + (x.reviewMs || 0), 0);
+  const active = answering + review;
   const total = active + a.awayMs + a.idleMs;
   const rushed = answered.filter((x) => x.ms < RUSH_MS);
   const rushedWrong = rushed.filter((x) => x.correct === false).length;
   const changes = a.answers.reduce((s, x) => s + x.changes, 0);
-  const per = answered.length ? active / answered.length : 0;
+  const per = answered.length ? answering / answered.length : 0;
   const rushShare = answered.length ? rushed.length / answered.length : 0;
   const awayShare = total ? a.awayMs / total : 0;
   const idleShare = total ? a.idleMs / total : 0;
@@ -44,7 +48,7 @@ export function metrics(a: AttemptStats) {
   if (a.status !== "done") effort = { label: "In progress", tone: "info" };
 
   return {
-    answered: answered.length, active, total, per, away: a.awayMs, idle: a.idleMs, awayCount: a.awayCount,
+    answered: answered.length, active, review, total, per, away: a.awayMs, idle: a.idleMs, awayCount: a.awayCount,
     median: median(answered.map((x) => x.ms)), rushed: rushed.length, rushedWrong, changes, effort,
     pct: a.status === "done" && a.total ? Math.round((100 * (a.score || 0)) / a.total) : null,
   };

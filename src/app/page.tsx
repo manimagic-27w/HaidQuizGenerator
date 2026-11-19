@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function Home() {
   const viewer = await requireViewer();
   const all = await db
-    .select({ id: quizzes.id, title: quizzes.title, subject: quizzes.subject, createdAt: quizzes.createdAt, assignedTo: quizzes.assignedTo, count: sql<number>`count(${questions.id})::int` })
+    .select({ id: quizzes.id, title: quizzes.title, subject: quizzes.subject, createdAt: quizzes.createdAt, assignedTo: quizzes.assignedTo, madeByStudent: quizzes.madeByStudent, count: sql<number>`count(${questions.id})::int` })
     .from(quizzes).leftJoin(questions, eq(questions.quizId, quizzes.id))
     .where(and(eq(quizzes.ownerFamilyId, viewer.familyId), eq(quizzes.archived, false))).groupBy(quizzes.id).orderBy(desc(quizzes.createdAt));
   const list = viewer.isParent ? all : all.filter((q) => canSee(q.assignedTo, viewer.id));
@@ -50,7 +50,7 @@ export default async function Home() {
             const best = done.length ? Math.max(...done.map((a) => Math.round((100 * (a.score || 0)) / (a.total || 1)))) : null;
             return (
               <article className="sheet qcard" key={q.id}>
-                {q.subject && <div><span className="pill info">{q.subject}</span></div>}
+                {(q.subject || q.madeByStudent) && <div className="row" style={{ gap: 6 }}>{q.subject && <span className="pill info">{q.subject}</span>}{q.madeByStudent && <span className="pill hi">Practice</span>}</div>}
                 <h3>{q.title}</h3>
                 <p className="small muted">{q.count} questions · added {q.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</p>
                 <div className="foot">

@@ -23,7 +23,7 @@ export async function POST(req: Request) {
   }
 
   const [quiz] = await db.insert(quizzes).values({
-    ownerFamilyId: viewer.familyId, title: d.title, subject: d.subject, createdBy: viewer.id, assignedTo, studyNotes: d.studyNotes, familyId,
+    ownerFamilyId: viewer.familyId, title: d.title, subject: d.subject, createdBy: viewer.id, assignedTo, studyNotes: d.studyNotes, familyId, sourceQuizId: familyId ? d.sourceQuizId : null,
   }).returning({ id: quizzes.id });
   await db.insert(questions).values(d.questions.map((q, i) => {
     const order = [0, 1, 2, 3].sort(() => Math.random() - 0.5);

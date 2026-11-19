@@ -25,6 +25,6 @@ export async function limitReached(familyId: string): Promise<string | null> {
   return `Your family has used all ${a.limit} of this month's quiz and spelling-list creations. The count resets on the 1st. Ask the site admin if you need more.`;
 }
 
-export async function recordGeneration(familyId: string, userId: string, kind: "quiz" | "round" | "spelling") {
+export async function recordGeneration(familyId: string, userId: string, kind: "quiz" | "round" | "spelling" | "practice") {
   await db.insert(generations).values({ familyId, userId, kind });
 }

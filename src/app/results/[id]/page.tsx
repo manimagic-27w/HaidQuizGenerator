@@ -4,6 +4,8 @@ import { asc, eq } from "drizzle-orm";
 import { db, attempts, attemptAnswers, questions } from "@/db";
 import { requireViewer } from "@/lib/auth";
 import { LETTERS, fmtDur, fmtSec, metrics } from "@/lib/metrics";
+import { practiceStatus } from "@/lib/practice";
+import PracticeButton from "./PracticeButton";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +20,8 @@ export default async function Results({ params }: { params: Promise<{ id: string
     .where(eq(attemptAnswers.attemptId, id)).orderBy(asc(attemptAnswers.position));
   const m = metrics({ ...a, answers: rows.map((r) => r.ans) });
   const pct = m.pct ?? 0;
+  const practice = a.studentId === viewer.id ? await practiceStatus(a.quizId, viewer) : { kind: "none" as const };
+  const missed = rows.filter((r) => r.ans.correct === false).length;
 
   return (
     <>
@@ -34,6 +38,13 @@ export default async function Results({ params }: { params: Promise<{ id: string
           {viewer.isParent && <Link className="btn" href={`/parent/attempts/${a.id}`}>Time breakdown</Link>}
         </div>
       </section>
+      {practice.kind === "available" && a.quizId && <PracticeButton quizId={a.quizId} missed={missed} />}
+      {practice.kind === "made" && (
+        <section className="sheet stack practice">
+          <p>You already made your practice quiz for this one.</p>
+          <div className="row"><Link className="btn primary" href={`/quiz/${practice.quizId}`} prefetch={false}>Open my practice quiz</Link></div>
+        </section>
+      )}
       <section className="stack">
         <h2>Review</h2>
         <div className="review">

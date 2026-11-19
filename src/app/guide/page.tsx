@@ -69,7 +69,8 @@ export default async function Guide() {
         <h2><span className="step">4</span>What your kids see</h2>
         <ul>
           <li>Only what you&apos;ve assigned to them, on their home screen.</li>
-          <li><b>Quizzes</b> show one question at a time. They can skip and come back, or tap <b>Save &amp; exit</b> and resume later. After they submit, they see their score and an explanation for every question.</li>
+          <li><b>Quizzes</b> show one question at a time. They pick an answer and tap <b>Check answer</b>: a wrong answer shows the right one with a short explanation, and the answer locks so it can&apos;t be changed after seeing it. They can skip and come back, or tap <b>Save &amp; exit</b> and resume later.</li>
+          <li><b>Practice quiz:</b> after finishing a quiz you made, your child can make one practice quiz of their own from it: 20 new questions, about half on what they missed. It shows up with a <b>Practice</b> tag, for them and in your Quizzes list.</li>
           <li><b>Spelling games</b> read each word aloud, so they need their sound on. Any word they slip on comes back once at the end.</li>
         </ul>
         <p className="note">On a phone or iPad, have them open the site in Safari and choose <b>Share → Add to Home Screen</b>. It opens like an app and keeps them signed in.</p>
@@ -80,7 +81,7 @@ export default async function Guide() {
         <p>The <Link href="/parent">Parent</Link> tab shows the last 30 days at the top and every attempt below it. Tap a date for a question-by-question breakdown with a time chart.</p>
         <dl className="terms">
           <div><dt>Focused time</dt><dd>Time actually on the quiz. It leaves out time spent in other apps or tabs, and any stretch longer than {idle} seconds with no taps or typing.</dd></div>
-          <div><dt>Rushed</dt><dd>An answer given in under {rush} seconds, which usually means guessing.</dd></div>
+          <div><dt>Rushed</dt><dd>An answer given in under {rush} seconds, which usually means guessing. This counts only the time to answer, not time spent reading the explanation afterwards.</dd></div>
           <div><dt>Left page</dt><dd>How many times they switched away from the quiz, and for how long.</dd></div>
         </dl>
         <p>Each attempt gets an effort label:</p>
@@ -105,7 +106,7 @@ export default async function Guide() {
 
       <section id="limit">
         <h2><span className="step">7</span>Your monthly limit</h2>
-        <p>New quizzes, next rounds and spelling lists each count as one toward your family&apos;s monthly limit. The Parent tab shows how many you have left, and the count resets on the 1st. Taking quizzes and playing the spelling games never counts.</p>
+        <p>New quizzes, next rounds, spelling lists and your kids&apos; practice quizzes each count as one toward your family&apos;s monthly limit. The Parent tab shows how many you have left, and the count resets on the 1st. Taking quizzes and playing the spelling games never counts.</p>
       </section>
 
       <section id="help">

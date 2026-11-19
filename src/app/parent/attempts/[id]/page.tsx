@@ -55,6 +55,7 @@ export default async function AttemptDetail({ params }: { params: Promise<{ id: 
           <div><span>Score</span><span>{m.pct != null ? `${a.score}/${a.total} (${m.pct}%)` : "—"}</span></div>
           <div><span>Total time</span><span>{fmtDur(m.total)}</span></div>
           <div><span>Focused time</span><span>{fmtDur(m.active)}</span></div>
+          <div><span>Reading feedback</span><span>{fmtDur(m.review)}</span></div>
           <div><span>Avg per question</span><span>{fmtSec(m.per)}</span></div>
           <div><span>Median per question</span><span>{fmtSec(m.median)}</span></div>
           <div><span>Rushed (&lt;{RUSH_MS / 1000}s)</span><span>{m.rushed} of {m.answered}</span></div>

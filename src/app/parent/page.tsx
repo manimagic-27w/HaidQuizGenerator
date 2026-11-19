@@ -32,18 +32,18 @@ export default async function ParentPage() {
   const ans = list.length ? await db.select().from(attemptAnswers).where(inArray(attemptAnswers.attemptId, list.map((a) => a.id))) : [];
   const rows = list.map((a) => ({ a, m: metrics({ ...a, answers: ans.filter((x) => x.attemptId === a.id) }) }));
   const quizList = await db
-    .select({ id: quizzes.id, title: quizzes.title, archived: quizzes.archived, assignedTo: quizzes.assignedTo, count: sql<number>`count(distinct ${questions.id})::int` })
+    .select({ id: quizzes.id, title: quizzes.title, archived: quizzes.archived, assignedTo: quizzes.assignedTo, madeByStudent: quizzes.madeByStudent, createdBy: quizzes.createdBy, count: sql<number>`count(distinct ${questions.id})::int` })
     .from(quizzes).leftJoin(questions, eq(questions.quizId, quizzes.id)).where(eq(quizzes.ownerFamilyId, fam)).groupBy(quizzes.id).orderBy(desc(quizzes.createdAt));
   const finishedByQuiz = Object.fromEntries(quizList.map((q) => [q.id, list.filter((a) => a.quizId === q.id && a.status === "done").length]));
 
   const cutoff = Date.now() - 30 * 864e5;
   const recent = rows.filter((r) => r.a.status === "done" && r.a.finishedAt && r.a.finishedAt.getTime() >= cutoff).map((r) => r.m);
-  const sum = (k: "active" | "answered" | "rushed" | "away" | "idle" | "pct") => recent.reduce((s, x) => s + (x[k] || 0), 0);
+  const sum = (k: "active" | "answered" | "rushed" | "away" | "idle" | "pct" | "review") => recent.reduce((s, x) => s + (x[k] || 0), 0);
   const answered = sum("answered");
   const tiles: [string, string][] = recent.length ? [
     ["Focused study time", fmtDur(sum("active"))],
     ["Quizzes finished", String(recent.length)],
-    ["Avg per question", fmtSec(answered ? sum("active") / answered : 0)],
+    ["Avg per question", fmtSec(answered ? (sum("active") - sum("review")) / answered : 0)],
     ["Avg score", `${Math.round(sum("pct") / recent.length)}%`],
     ["Rushed answers", `${Math.round((100 * sum("rushed")) / Math.max(1, answered))}%`],
     ["Away or idle", fmtDur(sum("away") + sum("idle"))],
@@ -122,7 +122,7 @@ export default async function ParentPage() {
         </section>
       )}
 
-      <QuizManager students={students} quizzes={quizList.map((q) => ({ ...q, finished: finishedByQuiz[q.id] || 0 }))} />
+      <QuizManager students={students} quizzes={quizList.map((q) => ({ ...q, finished: finishedByQuiz[q.id] || 0, madeBy: q.madeByStudent ? (students.find((st) => st.id === q.createdBy)?.name || "your child") : null }))} />
       <SpellingManager students={students} lists={spelling} />
       <FamilyPeople familyName={famRow?.name || "Your family"} people={people} />
     </>
